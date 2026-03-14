@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "anchorscape": {
+      "command": "node",
+      "args": ["./backend/dist/mcp/index.js"],
+      "env": {
+        "ANCHOR_API_URL": "https://anchorscape.com"
+      }
+    }
+  }
+}

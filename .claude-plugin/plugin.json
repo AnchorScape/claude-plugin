@@ -1,0 +1,14 @@
+{
+  "name": "anchorscape",
+  "displayName": "Anchorscape - Scan, Fix & Deploy",
+  "description": "Security scan your code, auto-fix vulnerabilities, and deploy to production. Scanning and fixing are free (done by Claude). Deploy to managed infrastructure with SSL and custom domains.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Anchorscape"
+  },
+  "homepage": "https://anchorscape.com",
+  "repository": "https://github.com/AnchorScape/claude-plugin",
+  "license": "MIT",
+  "skills": ["scan", "fix", "deploy", "status"],
+  "mcp": true
+}

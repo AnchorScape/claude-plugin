@@ -1,0 +1,12 @@
+{
+  "name": "anchorscape",
+  "description": "Anchorscape plugins for code security scanning, auto-fixing, and deployment",
+  "plugins": [
+    {
+      "name": "anchorscape",
+      "version": "1.0.0",
+      "description": "Scan, fix, and deploy your code from Claude Code",
+      "source": "."
+    }
+  ]
+}
