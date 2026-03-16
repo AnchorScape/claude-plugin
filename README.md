@@ -6,11 +6,15 @@ Scan your code for security vulnerabilities, auto-fix them, and deploy to produc
 
 ## Install
 
+In Claude Code, run:
+
 ```bash
-claude plugin add AnchorScape/claude-plugin
+/plugin marketplace add AnchorScape/claude-plugin
+/plugin install anchorscape
 ```
 
-Or add to your `.mcp.json`:
+Or manually — add the MCP server to your `.mcp.json` and copy the `skills/` directory into your project:
+
 ```json
 {
   "mcpServers": {
