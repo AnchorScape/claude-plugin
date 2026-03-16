@@ -80,12 +80,16 @@ Changes Applied:
 ...
 ```
 
-### Step 5: Re-scan and Compare
+### Step 5: Full Re-scan
 
-After applying fixes, do a quick re-assessment:
-- Re-read the fixed files
-- Check that the original issue patterns no longer match
-- Estimate the new score
+After applying all fixes, run the **complete scan procedure** from `/anchorscape:scan` (Steps 2-6) against the now-fixed codebase:
+
+1. Re-run all the same Grep patterns from the scan skill against the fixed files
+2. Re-check security, performance, architecture, and gaps — same checklist as the original scan
+3. Score from scratch using the same deduction rules (start at 100, deduct per finding)
+4. Save the new report to `.anchorscape/report.json` (overwriting the old one)
+
+This is a **real rescan**, not an estimate. The before/after comparison must reflect actual findings.
 
 ### Step 6: Generate Summary
 
@@ -97,8 +101,8 @@ Anchorscape Auto-Fix Complete
 Changes Applied: X files modified
 Findings Fixed: X of Y total
 
-Before: XX/100
-After:  XX/100 (estimated)
+Before: XX/100 (X critical, X high, X medium, X low)
+After:  XX/100 (X critical, X high, X medium, X low)
 
 Changes:
 1. [CRITICAL] Fixed SQL injection in db/queries.ts:42
@@ -109,10 +113,14 @@ Changes:
 Dependencies to install:
   npm install helmet express-rate-limit zod
 
-Remaining (manual fix needed):
-- [arch-3] Service layer extraction (too complex for auto-fix)
+Remaining issues (from rescan):
+- [sec-5] MEDIUM: Missing CSP header — config.ts:12
+- [arch-3] LOW: Service layer extraction recommended
+
+Skipped (manual fix needed):
 - [gap-2] Add comprehensive test suite
 
+Updated report saved to .anchorscape/report.json
 To deploy the fixed code: /anchorscape:deploy
 ```
 
