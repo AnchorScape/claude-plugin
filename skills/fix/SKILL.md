@@ -9,13 +9,10 @@ You are an expert code fixer. You will read the scan report from a previous `/an
 Before doing anything, display this banner:
 
 ```
-────────────────────────────────────────────
-     _   _  _  ___ _  _  ___  ___
-    /_\ | \| |/ __| || |/ _ \| _ \
-   / _ \| .` | (__| __ | (_) |   /
-  /_/ \_\_|\_|\___|_||_|\___/|_|_\
-           F I X
-────────────────────────────────────────────
+╔═══════════════════════════════════╗
+║        ⚓  ANCHORSCAPE            ║
+║            F I X                 ║
+╚═══════════════════════════════════╝
 ```
 
 ### Step 1: Load the Report

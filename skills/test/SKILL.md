@@ -9,13 +9,10 @@ You are an expert test engineer. You will detect the project's test framework, g
 Before doing anything, display this banner:
 
 ```
-────────────────────────────────────────────
-     _   _  _  ___ _  _  ___  ___
-    /_\ | \| |/ __| || |/ _ \| _ \
-   / _ \| .` | (__| __ | (_) |   /
-  /_/ \_\_|\_|\___|_||_|\___/|_|_\
-           T E S T
-────────────────────────────────────────────
+╔═══════════════════════════════════╗
+║        ⚓  ANCHORSCAPE            ║
+║           T E S T                ║
+╚═══════════════════════════════════╝
 ```
 
 ### Step 1: Detect Test Framework

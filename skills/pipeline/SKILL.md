@@ -11,15 +11,12 @@ This is the "ship it" command. It takes a project from raw code to deployed and 
 Before doing anything, display this banner:
 
 ```
-────────────────────────────────────────────
-     _   _  _  ___ _  _  ___  ___
-    /_\ | \| |/ __| || |/ _ \| _ \
-   / _ \| .` | (__| __ | (_) |   /
-  /_/ \_\_|\_|\___|_||_|\___/|_|_\
-        P I P E L I N E
-────────────────────────────────────────────
-  scan → fix → build → test → rescan → deploy
-────────────────────────────────────────────
+╔═══════════════════════════════════════════════╗
+║           ⚓  ANCHORSCAPE                     ║
+║           P I P E L I N E                    ║
+║                                              ║
+║  scan → fix → build → test → rescan → deploy ║
+╚═══════════════════════════════════════════════╝
 ```
 
 Check the project directory:

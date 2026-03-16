@@ -270,21 +270,34 @@ const ANSI = {
 function stderrBanner(tool: string): void {
   const banners: Record<string, string> = {
     deploy: `
-${ANSI.blue}${ANSI.bold}    ___                __
-   /   |  ____  _____/ /_  ____  ______________  ____ _____
-  / /| | / __ \\/ ___/ __ \\/ __ \\/ ___/ ___/ __ \\/ __ \`/ __ \\
- / ___ |/ / / / /__/ / / / /_/ / /  (__  ) /_/ / /_/ / /_/ /
-/_/  |_/_/ /_/\\___/_/ /_/\\____/_/  /____/\\____/\\__,_/ .___/
-                                                   /_/      ${ANSI.reset}
-${ANSI.cyan}  DEPLOY${ANSI.reset}`,
+${ANSI.blue}${ANSI.bold}  ╔═══════════════════════════════════╗
+  ║        ⚓  ANCHORSCAPE             ║
+  ║           D E P L O Y             ║
+  ╚═══════════════════════════════════╝${ANSI.reset}`,
 
-    login: `${ANSI.magenta}${ANSI.bold}  ⚓ Anchorscape Login${ANSI.reset}`,
+    login: `
+${ANSI.magenta}${ANSI.bold}  ╔═══════════════════════════════════╗
+  ║        ⚓  ANCHORSCAPE             ║
+  ║           L O G I N               ║
+  ╚═══════════════════════════════════╝${ANSI.reset}`,
 
-    status: `${ANSI.cyan}${ANSI.bold}  ⚓ Anchorscape Status${ANSI.reset}`,
+    status: `
+${ANSI.cyan}${ANSI.bold}  ╔═══════════════════════════════════╗
+  ║        ⚓  ANCHORSCAPE             ║
+  ║          S T A T U S              ║
+  ╚═══════════════════════════════════╝${ANSI.reset}`,
 
-    logs: `${ANSI.dim}  ⚓ Anchorscape Logs${ANSI.reset}`,
+    logs: `
+${ANSI.dim}  ╔═══════════════════════════════════╗
+  ║        ⚓  ANCHORSCAPE             ║
+  ║            L O G S                ║
+  ╚═══════════════════════════════════╝${ANSI.reset}`,
 
-    projects: `${ANSI.cyan}${ANSI.bold}  ⚓ Anchorscape Projects${ANSI.reset}`,
+    projects: `
+${ANSI.cyan}${ANSI.bold}  ╔═══════════════════════════════════╗
+  ║        ⚓  ANCHORSCAPE             ║
+  ║       P R O J E C T S            ║
+  ╚═══════════════════════════════════╝${ANSI.reset}`,
   };
 
   const banner = banners[tool];

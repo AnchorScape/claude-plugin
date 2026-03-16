@@ -9,13 +9,10 @@ Deploy the current project to Anchorscape's managed infrastructure. Your app wil
 Before doing anything, display this banner:
 
 ```
-────────────────────────────────────────────
-     _   _  _  ___ _  _  ___  ___
-    /_\ | \| |/ __| || |/ _ \| _ \
-   / _ \| .` | (__| __ | (_) |   /
-  /_/ \_\_|\_|\___|_||_|\___/|_|_\
-         D E P L O Y
-────────────────────────────────────────────
+╔═══════════════════════════════════╗
+║        ⚓  ANCHORSCAPE            ║
+║         D E P L O Y              ║
+╚═══════════════════════════════════╝
 ```
 
 ### Step 1: Score Gate

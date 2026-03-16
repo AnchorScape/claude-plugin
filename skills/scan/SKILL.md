@@ -11,13 +11,10 @@ This scan is performed entirely by you using your filesystem tools. No external 
 Before doing anything, display this banner:
 
 ```
-────────────────────────────────────────────
-     _   _  _  ___ _  _  ___  ___
-    /_\ | \| |/ __| || |/ _ \| _ \
-   / _ \| .` | (__| __ | (_) |   /
-  /_/ \_\_|\_|\___|_||_|\___/|_|_\
-           S C A N
-────────────────────────────────────────────
+╔═══════════════════════════════════╗
+║        ⚓  ANCHORSCAPE            ║
+║           S C A N                ║
+╚═══════════════════════════════════╝
 ```
 
 ### Step 1: Discover the project
