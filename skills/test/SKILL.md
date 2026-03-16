@@ -126,28 +126,36 @@ If tests fail:
 Display results:
 
 ```
-Anchorscape Test Complete
+────────────────────────────────────────────
+  ANCHORSCAPE TEST COMPLETE
+────────────────────────────────────────────
 
-Framework: vitest
-Test Command: npx vitest run
+  Framework:     vitest
+  Test Command:  npx vitest run
 
-Tests Generated: X new test files
-Tests Run: X total
-  Passed: X
-  Failed: X
+  Generated:     X new test files
+  Total Run:     X tests
+    Passed:      X
+    Failed:      X
 
-Coverage:
-  Security fixes tested: X of Y
-  Performance fixes tested: X of Y
-  Architecture fixes tested: X of Y
+  Fix Coverage:
+    Security:      X of Y fixes tested
+    Performance:   X of Y fixes tested
+    Architecture:  X of Y fixes tested
 
-New test files:
-  src/auth/__tests__/middleware.test.ts
-  src/db/__tests__/queries.test.ts
-  src/api/__tests__/validation.test.ts
+  New Test Files:
+    src/auth/__tests__/middleware.test.ts
+    src/db/__tests__/queries.test.ts
+    src/api/__tests__/validation.test.ts
 
-To rescan with updated score: /anchorscape:scan
-To deploy: /anchorscape:deploy
+────────────────────────────────────────────
+
+  Next:
+    /anchorscape:scan      Rescan for updated score
+    /anchorscape:deploy    Deploy this project
+    /anchorscape:dev       Start iterative dev loop
+
+────────────────────────────────────────────
 ```
 
 ## Important Notes

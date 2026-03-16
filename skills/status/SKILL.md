@@ -30,15 +30,27 @@ Arguments: { "projectName": "<name>" }
 ### Step 4: Display Dashboard
 
 ```
-Anchorscape Deployments
+────────────────────────────────────────────
+  ANCHORSCAPE DEPLOYMENTS
+────────────────────────────────────────────
 
-Project: my-app
-  production  https://my-app.anchorscape.com     LIVE    Last deploy: 2h ago
-  staging     https://my-app-staging.anchor...    LIVE    Last deploy: 5h ago
-  development https://my-app-dev.anchor...        LIVE    Last deploy: 1d ago
+  Project: my-app
+  ┌─────────────┬────────┬─────────────────────────────────┬───────────┐
+  │ Environment │ Status │ URL                             │ Deployed  │
+  ├─────────────┼────────┼─────────────────────────────────┼───────────┤
+  │ production  │ LIVE   │ https://my-app.anchorscape.com  │ 2h ago    │
+  │ staging     │ LIVE   │ https://my-app-stg.anchor...    │ 5h ago    │
+  │ development │ LIVE   │ https://my-app-dev.anchor...    │ 1d ago    │
+  └─────────────┴────────┴─────────────────────────────────┴───────────┘
 
-Project: api-service
-  production  https://api-service.anchorscape.com LIVE    Last deploy: 3d ago
+  Project: api-service
+  ┌─────────────┬────────┬──────────────────────────────────┬──────────┐
+  │ Environment │ Status │ URL                              │ Deployed │
+  ├─────────────┼────────┼──────────────────────────────────┼──────────┤
+  │ production  │ LIVE   │ https://api-svc.anchorscape.com  │ 3d ago   │
+  └─────────────┴────────┴──────────────────────────────────┴──────────┘
+
+────────────────────────────────────────────
 ```
 
 ### Optional: Show Logs

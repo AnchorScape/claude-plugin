@@ -156,17 +156,24 @@ Use the `anchorscape_deploy` MCP tool:
 2. Call `anchorscape_deploy` with the project directory
 
 Display the final result:
+
 ```
-Anchorscape Pipeline Complete
+────────────────────────────────────────────
+  ANCHORSCAPE PIPELINE COMPLETE
+────────────────────────────────────────────
 
-Scan:    XX/100 → XX/100 (+XX points)
-Fixes:   X applied across X files
-Build:   PASS
-Tests:   X passed, X failed
-Deploy:  LIVE at https://your-app.anchorscape.com
+  Scan:     XX/100 → XX/100 (+XX points)
+  Fixes:    X applied across X files
+  Build:    PASS
+  Tests:    X passed, X failed
+  Deploy:   LIVE
 
-Badge for your README:
-[![Deployed on Anchorscape](https://anchorscape.com/api/badge/your-app/status)](https://anchorscape.com)
+  URL:      https://your-app.anchorscape.com
+
+  Badge for your README:
+    [![Deployed on Anchorscape](https://anchorscape.com/api/badge/your-app/status)](https://anchorscape.com)
+
+────────────────────────────────────────────
 ```
 
 ## Pipeline Summary Format
@@ -174,17 +181,23 @@ Badge for your README:
 At the end, always show the full pipeline summary:
 
 ```
-┌─────────┬────────┬──────────────────────────────┐
-│ Step    │ Status │ Details                      │
-├─────────┼────────┼──────────────────────────────┤
-│ Scan    │ DONE   │ Score: 34/100                │
-│ Fix     │ DONE   │ 12 findings fixed (3 rounds) │
-│ Build   │ PASS   │ tsc clean                    │
-│ Test    │ PASS   │ 28 passed, 0 failed          │
-│ Rescan  │ DONE   │ Score: 78/100 (+44)          │
-│ Gate    │ PASS   │ 0 critical, 2 high           │
-│ Deploy  │ LIVE   │ https://app.anchorscape.com   │
-└─────────┴────────┴──────────────────────────────┘
+  ┌─────────┬────────┬──────────────────────────────┐
+  │ Step    │ Status │ Details                      │
+  ├─────────┼────────┼──────────────────────────────┤
+  │ Scan    │ DONE   │ Score: 34/100                │
+  │ Fix     │ DONE   │ 12 findings fixed (3 rounds) │
+  │ Build   │ PASS   │ tsc clean                    │
+  │ Test    │ PASS   │ 28 passed, 0 failed          │
+  │ Rescan  │ DONE   │ Score: 78/100 (+44)          │
+  │ Gate    │ PASS   │ 0 critical, 2 high           │
+  │ Deploy  │ LIVE   │ https://app.anchorscape.com   │
+  └─────────┴────────┴──────────────────────────────┘
+
+  Next:
+    /anchorscape:dev       Iterative dev loop
+    /anchorscape:promote   Promote to staging/prod
+    /anchorscape:dns       Set up custom domain
+    /anchorscape:status    Check deployment health
 ```
 
 ## Important Notes

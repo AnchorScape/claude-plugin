@@ -186,27 +186,37 @@ Minimum score is 0. Round to nearest integer.
 After saving the report, display a summary to the user:
 
 ```
-Anchorscape Security Scan Complete
+────────────────────────────────────────────
+  ANCHORSCAPE SCAN COMPLETE
+────────────────────────────────────────────
 
-Score: XX/100 — [Readiness Level]
+  Project:    <name>
+  Framework:  <detected>
+  Score:      XX/100 — [Readiness Level]
 
-Findings:
-  CRITICAL: X
-  HIGH: X
-  MEDIUM: X
-  LOW: X
+  Findings:
+    CRITICAL:  X
+    HIGH:      X
+    MEDIUM:    X
+    LOW:       X
 
-Top Issues:
-1. [Most critical finding title] — file.ts:line
-2. [Second most critical] — file.ts:line
-3. [Third most critical] — file.ts:line
+  Top Issues:
+    1. [CRITICAL] <title> — file.ts:42
+    2. [HIGH]     <title> — file.ts:15
+    3. [MEDIUM]   <title> — file.ts:88
 
-Production Readiness: XX% gap coverage
+  Production Readiness: XX% gap coverage
 
-Report saved to .anchorscape/report.json
+────────────────────────────────────────────
 
-To auto-fix these issues, run: /anchorscape:fix
-To deploy this project, run: /anchorscape:deploy
+  Report saved to .anchorscape/report.json
+
+  Next:
+    /anchorscape:fix       Auto-fix issues
+    /anchorscape:deploy    Deploy this project
+    /anchorscape:pipeline  Full scan-fix-deploy
+
+────────────────────────────────────────────
 ```
 
 ## Important Notes

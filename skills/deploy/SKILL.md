@@ -80,17 +80,29 @@ The tool will:
 Display the deployment result:
 
 ```
-Deployed to Anchorscape!
+────────────────────────────────────────────
+  DEPLOYED TO ANCHORSCAPE
+────────────────────────────────────────────
 
-URL: https://your-app.anchorscape.com
-Environment: development
-Status: Live
-Score: XX/100
+  URL:          https://your-app.anchorscape.com
+  Environment:  development
+  Status:       Running
+  Score:        XX/100
 
-Add this badge to your README:
-[![Deployed on Anchorscape](https://anchorscape.com/api/badge/your-app/status)](https://anchorscape.com)
+────────────────────────────────────────────
 
-Share with your team or make it public from the Anchorscape dashboard.
+  Badge for your README:
+    [![Deployed on Anchorscape](https://anchorscape.com/api/badge/your-app/status)](https://anchorscape.com)
+
+  Custom domain?
+    /anchorscape:dns       Set up your own domain
+
+  Next:
+    /anchorscape:dev       Iterative dev loop
+    /anchorscape:promote   Promote to staging/prod
+    /anchorscape:status    Check deployment health
+
+────────────────────────────────────────────
 ```
 
 ## Error Handling

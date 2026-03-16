@@ -134,36 +134,43 @@ This is a **real rescan**, not an estimate. The before/after comparison must ref
 Display the results:
 
 ```
-Anchorscape Auto-Fix Complete
+────────────────────────────────────────────
+  ANCHORSCAPE AUTO-FIX COMPLETE
+────────────────────────────────────────────
 
-Build: PASS
-Fix Rounds: X (until stable)
-Changes Applied: X files modified
-Findings Fixed: X of Y total
+  Build:          PASS
+  Fix Rounds:     X (until stable)
+  Files Modified: X
+  Findings Fixed: X of Y
 
-Before: XX/100 (X critical, X high, X medium, X low)
-After:  XX/100 (X critical, X high, X medium, X low)
+  Before: XX/100 (X critical, X high, X medium, X low)
+  After:  XX/100 (X critical, X high, X medium, X low)
 
-Changes:
-1. [CRITICAL] Fixed SQL injection in db/queries.ts:42
-2. [HIGH] Added rate limiting to routes/auth.ts
-3. [MEDIUM] Replaced MD5 with SHA-256 in utils/hash.ts
-...
+  Changes Applied:
+    1. [CRITICAL] Fixed SQL injection — db/queries.ts:42
+    2. [HIGH]     Added rate limiting — routes/auth.ts
+    3. [MEDIUM]   SHA-256 replaces MD5 — utils/hash.ts
 
-Dependencies to install:
-  npm install helmet express-rate-limit zod
+  Dependencies to install:
+    npm install helmet express-rate-limit zod
 
-Remaining issues (from rescan):
-- [sec-5] MEDIUM: Missing CSP header — config.ts:12
-- [arch-3] LOW: Service layer extraction recommended
+  Remaining (from rescan):
+    - [MEDIUM] Missing CSP header — config.ts:12
+    - [LOW]    Service layer extraction recommended
 
-Skipped (manual fix needed):
-- [gap-2] Add comprehensive test suite
+  Skipped (manual fix needed):
+    - Add comprehensive test suite
 
-Updated report saved to .anchorscape/report.json
-To generate tests: /anchorscape:test
-To run full pipeline: /anchorscape:pipeline
-To deploy: /anchorscape:deploy
+────────────────────────────────────────────
+
+  Report saved to .anchorscape/report.json
+
+  Next:
+    /anchorscape:test      Generate tests
+    /anchorscape:deploy    Deploy this project
+    /anchorscape:pipeline  Full pipeline
+
+────────────────────────────────────────────
 ```
 
 ## Important Notes
