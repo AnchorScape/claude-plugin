@@ -272,31 +272,31 @@ function stderrBanner(tool: string): void {
     deploy: `
 ${ANSI.blue}${ANSI.bold}  ╔═══════════════════════════════════╗
   ║        ⚓  ANCHORSCAPE             ║
-  ║           D E P L O Y             ║
+  ║          D E P L O Y              ║
   ╚═══════════════════════════════════╝${ANSI.reset}`,
 
     login: `
 ${ANSI.magenta}${ANSI.bold}  ╔═══════════════════════════════════╗
   ║        ⚓  ANCHORSCAPE             ║
-  ║           L O G I N               ║
+  ║            L O G I N              ║
   ╚═══════════════════════════════════╝${ANSI.reset}`,
 
     status: `
 ${ANSI.cyan}${ANSI.bold}  ╔═══════════════════════════════════╗
   ║        ⚓  ANCHORSCAPE             ║
-  ║          S T A T U S              ║
+  ║           S T A T U S             ║
   ╚═══════════════════════════════════╝${ANSI.reset}`,
 
     logs: `
 ${ANSI.dim}  ╔═══════════════════════════════════╗
   ║        ⚓  ANCHORSCAPE             ║
-  ║            L O G S                ║
+  ║             L O G S               ║
   ╚═══════════════════════════════════╝${ANSI.reset}`,
 
     projects: `
 ${ANSI.cyan}${ANSI.bold}  ╔═══════════════════════════════════╗
   ║        ⚓  ANCHORSCAPE             ║
-  ║       P R O J E C T S            ║
+  ║        P R O J E C T S           ║
   ╚═══════════════════════════════════╝${ANSI.reset}`,
   };
 

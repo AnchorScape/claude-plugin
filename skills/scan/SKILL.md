@@ -13,7 +13,7 @@ Before doing anything, display this banner:
 ```
 ╔═══════════════════════════════════╗
 ║        ⚓  ANCHORSCAPE            ║
-║           S C A N                ║
+║            S C A N               ║
 ╚═══════════════════════════════════╝
 ```
 

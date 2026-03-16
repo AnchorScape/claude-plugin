@@ -11,7 +11,7 @@ Before doing anything, display this banner:
 ```
 ╔═══════════════════════════════════╗
 ║        ⚓  ANCHORSCAPE            ║
-║         D E P L O Y              ║
+║          D E P L O Y             ║
 ╚═══════════════════════════════════╝
 ```
 

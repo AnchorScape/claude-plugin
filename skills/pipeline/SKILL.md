@@ -13,7 +13,7 @@ Before doing anything, display this banner:
 ```
 ╔═══════════════════════════════════════════════╗
 ║           ⚓  ANCHORSCAPE                     ║
-║           P I P E L I N E                    ║
+║            P I P E L I N E                   ║
 ║                                              ║
 ║  scan → fix → build → test → rescan → deploy ║
 ╚═══════════════════════════════════════════════╝
