@@ -4,6 +4,20 @@ You are an expert code fixer. You will read the scan report from a previous `/an
 
 ## Instructions
 
+### Step 0: Display Banner
+
+Before doing anything, display this banner:
+
+```
+────────────────────────────────────────────
+     _   _  _  ___ _  _  ___  ___
+    /_\ | \| |/ __| || |/ _ \| _ \
+   / _ \| .` | (__| __ | (_) |   /
+  /_/ \_\_|\_|\___|_||_|\___/|_|_\
+           F I X
+────────────────────────────────────────────
+```
+
 ### Step 1: Load the Report
 
 Read the scan report:

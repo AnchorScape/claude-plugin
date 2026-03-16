@@ -8,6 +8,20 @@ This is the "ship it" command. It takes a project from raw code to deployed and 
 
 ### Step 0: Pre-flight
 
+Before doing anything, display this banner:
+
+```
+────────────────────────────────────────────
+     _   _  _  ___ _  _  ___  ___
+    /_\ | \| |/ __| || |/ _ \| _ \
+   / _ \| .` | (__| __ | (_) |   /
+  /_/ \_\_|\_|\___|_||_|\___/|_|_\
+        P I P E L I N E
+────────────────────────────────────────────
+  scan → fix → build → test → rescan → deploy
+────────────────────────────────────────────
+```
+
 Check the project directory:
 1. Confirm source files exist (not an empty directory)
 2. Read `package.json`, `requirements.txt`, `go.mod`, `Cargo.toml` etc. to identify the project

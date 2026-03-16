@@ -6,6 +6,20 @@ This scan is performed entirely by you using your filesystem tools. No external 
 
 ## Instructions
 
+### Step 0: Display Banner
+
+Before doing anything, display this banner:
+
+```
+────────────────────────────────────────────
+     _   _  _  ___ _  _  ___  ___
+    /_\ | \| |/ __| || |/ _ \| _ \
+   / _ \| .` | (__| __ | (_) |   /
+  /_/ \_\_|\_|\___|_||_|\___/|_|_\
+           S C A N
+────────────────────────────────────────────
+```
+
 ### Step 1: Discover the project
 
 Use Glob and Read to understand the project structure:

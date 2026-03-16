@@ -250,6 +250,67 @@ async function zipDirectory(dir: string): Promise<{ buffer: Buffer; fileCount: n
 }
 
 // ============================================================================
+// ANSI TERMINAL OUTPUT (stderr — bypasses Claude's markdown rendering)
+// ============================================================================
+
+const ANSI = {
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  blue: '\x1b[34m',
+  cyan: '\x1b[36m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  red: '\x1b[31m',
+  magenta: '\x1b[35m',
+  bgBlue: '\x1b[44m',
+  white: '\x1b[37m',
+};
+
+function stderrBanner(tool: string): void {
+  const banners: Record<string, string> = {
+    deploy: `
+${ANSI.blue}${ANSI.bold}    ___                __
+   /   |  ____  _____/ /_  ____  ______________  ____ _____
+  / /| | / __ \\/ ___/ __ \\/ __ \\/ ___/ ___/ __ \\/ __ \`/ __ \\
+ / ___ |/ / / / /__/ / / / /_/ / /  (__  ) /_/ / /_/ / /_/ /
+/_/  |_/_/ /_/\\___/_/ /_/\\____/_/  /____/\\____/\\__,_/ .___/
+                                                   /_/      ${ANSI.reset}
+${ANSI.cyan}  DEPLOY${ANSI.reset}`,
+
+    login: `${ANSI.magenta}${ANSI.bold}  ⚓ Anchorscape Login${ANSI.reset}`,
+
+    status: `${ANSI.cyan}${ANSI.bold}  ⚓ Anchorscape Status${ANSI.reset}`,
+
+    logs: `${ANSI.dim}  ⚓ Anchorscape Logs${ANSI.reset}`,
+
+    projects: `${ANSI.cyan}${ANSI.bold}  ⚓ Anchorscape Projects${ANSI.reset}`,
+  };
+
+  const banner = banners[tool];
+  if (banner) {
+    console.error(banner);
+    console.error('');
+  }
+}
+
+function stderrStatus(message: string, color: string = ANSI.blue): void {
+  console.error(`${color}  ▸ ${message}${ANSI.reset}`);
+}
+
+function stderrSuccess(message: string): void {
+  console.error(`${ANSI.green}  ✓ ${message}${ANSI.reset}`);
+}
+
+function stderrError(message: string): void {
+  console.error(`${ANSI.red}  ✗ ${message}${ANSI.reset}`);
+}
+
+function stderrStep(step: number, total: number, message: string): void {
+  console.error(`${ANSI.blue}  [${step}/${total}]${ANSI.reset} ${message}`);
+}
+
+// ============================================================================
 // HANDLERS
 // ============================================================================
 
@@ -261,13 +322,17 @@ export async function handleDeploy(
   environment: 'development' | 'staging' | 'production' = 'development',
   projectName?: string,
 ): Promise<string> {
+  stderrBanner('deploy');
+
   // Validate directory
   if (!fs.existsSync(directory) || !fs.statSync(directory).isDirectory()) {
+    stderrError(`Directory not found: ${directory}`);
     throw new Error(`Directory not found: ${directory}`);
   }
 
   // Check auth
   requireAuth();
+  stderrStatus('Authenticated');
 
   // Detect project name
   if (!projectName) {
@@ -287,9 +352,13 @@ export async function handleDeploy(
     .slice(0, 40);
   projectName = cleanName;
 
+  stderrStatus(`Project: ${projectName} → ${environment}`);
+
   // ZIP the directory
+  stderrStep(1, 4, 'Packaging project...');
   const { buffer, fileCount } = await zipDirectory(directory);
   const sizeMB = (buffer.length / 1024 / 1024).toFixed(1);
+  stderrSuccess(`Packaged ${fileCount} files (${sizeMB} MB)`);
 
   if (buffer.length > 100 * 1024 * 1024) {
     throw new Error(`Project is too large (${sizeMB} MB, max 100 MB). Add large files to .gitignore or .anchorignore.`);
@@ -311,6 +380,7 @@ export async function handleDeploy(
   } catch { /* first deploy, no existing project */ }
 
   // Upload
+  stderrStep(2, 4, 'Uploading to Anchorscape...');
   const formData = new FormData();
   formData.append('file', new Blob([new Uint8Array(buffer)]), 'project.zip');
 
@@ -337,6 +407,9 @@ export async function handleDeploy(
     environmentId?: string;
   };
 
+  stderrSuccess('Uploaded');
+  stderrStep(3, 4, 'Building container...');
+
   // Wait for deployment to complete (poll instead of SSE for MCP compatibility)
   const deploymentId = deployData.deploymentId;
   const maxWait = 300_000; // 5 minutes
@@ -357,12 +430,15 @@ export async function handleDeploy(
       if (dep.status === 'completed') {
         finalStatus = 'completed';
         finalUrl = dep.externalUrl || dep.deployedUrls?.[0] || `https://${projectName}.anchorscape.com`;
+        stderrStep(4, 4, 'Deploying...');
+        stderrSuccess('Deployed');
         break;
       }
 
       if (dep.status === 'failed') {
         finalStatus = 'failed';
         errorMessage = dep.errorMessage || 'Unknown error';
+        stderrError(`Deploy failed: ${errorMessage}`);
         break;
       }
 
@@ -373,6 +449,10 @@ export async function handleDeploy(
   }
 
   if (finalStatus === 'completed') {
+    console.error('');
+    console.error(`${ANSI.green}${ANSI.bold}  ✓ LIVE${ANSI.reset} ${ANSI.cyan}${finalUrl}${ANSI.reset}`);
+    console.error('');
+
     const lines = [
       '# Deployed Successfully!',
       '',
@@ -407,6 +487,7 @@ export async function handleDeploy(
  * Login via browser OAuth
  */
 export async function handleLogin(apiUrl?: string): Promise<string> {
+  stderrBanner('login');
   let baseUrl = apiUrl || process.env.ANCHOR_API_URL || 'https://anchorscape.com';
 
   // Validate apiUrl against the same allowlist used by getBaseUrl()
@@ -426,6 +507,7 @@ export async function handleLogin(apiUrl?: string): Promise<string> {
   // Check if already logged in
   const existing = loadCredentials();
   if (existing && !isTokenExpired(existing)) {
+    stderrSuccess(`Logged in as ${existing.email}`);
     return [
       `Already logged in as **${existing.email}**`,
       `API: ${existing.apiUrl}`,
@@ -520,6 +602,8 @@ export async function handleLogin(apiUrl?: string): Promise<string> {
     apiUrl: baseUrl,
   });
 
+  stderrSuccess(`Logged in as ${result.email}`);
+
   return [
     `Logged in as **${result.email}**`,
     '',
@@ -534,6 +618,7 @@ export async function handleStatus(
   projectName?: string,
   environmentId?: string,
 ): Promise<string> {
+  stderrBanner('status');
   requireAuth();
 
   // If specific environment given
@@ -613,6 +698,7 @@ export async function handleLogs(
   environmentId: string,
   lines: number = 50,
 ): Promise<string> {
+  stderrBanner('logs');
   requireAuth();
 
   // Clamp lines to prevent abuse
@@ -638,5 +724,6 @@ export async function handleLogs(
  * List all projects
  */
 export async function handleProjects(): Promise<string> {
+  stderrBanner('projects');
   return handleStatus();
 }

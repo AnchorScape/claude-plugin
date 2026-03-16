@@ -4,6 +4,20 @@ You are an expert test engineer. You will detect the project's test framework, g
 
 ## Instructions
 
+### Step 0: Display Banner
+
+Before doing anything, display this banner:
+
+```
+────────────────────────────────────────────
+     _   _  _  ___ _  _  ___  ___
+    /_\ | \| |/ __| || |/ _ \| _ \
+   / _ \| .` | (__| __ | (_) |   /
+  /_/ \_\_|\_|\___|_||_|\___/|_|_\
+           T E S T
+────────────────────────────────────────────
+```
+
 ### Step 1: Detect Test Framework
 
 Search for test configuration and existing tests:
