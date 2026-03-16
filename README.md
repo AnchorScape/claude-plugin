@@ -13,14 +13,25 @@ In Claude Code, run:
 /plugin install anchorscape
 ```
 
-Or manually — add the MCP server to your `.mcp.json` and copy the `skills/` directory into your project:
+### Manual Install (from GitHub)
+
+```bash
+git clone https://github.com/AnchorScape/claude-plugin.git ~/.claude-plugins/anchorscape
+cd ~/.claude-plugins/anchorscape
+npm install && npm run build
+```
+
+Then add to your `~/.claude/.mcp.json` (or project `.mcp.json`):
 
 ```json
 {
   "mcpServers": {
     "anchorscape": {
-      "command": "npx",
-      "args": ["@anchorscape/claude-plugin"]
+      "command": "node",
+      "args": ["~/.claude-plugins/anchorscape/dist/index.js"],
+      "env": {
+        "ANCHOR_API_URL": "https://anchorscape.com"
+      }
     }
   }
 }
@@ -45,6 +56,8 @@ Reads the scan report and automatically fixes issues:
 - Hardcoded secrets → environment variables
 - Empty catch blocks → proper error handling
 - And more
+
+Runs a **full rescan** after fixing to give you real before/after scores.
 
 ### `/anchorscape:deploy` — Deploy to Production
 Deploys your project to Anchorscape's managed infrastructure:

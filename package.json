@@ -1,0 +1,46 @@
+{
+  "name": "@anchorscape/claude-plugin",
+  "version": "1.0.0",
+  "description": "Scan, fix, and deploy your code from Claude Code",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "anchorscape-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "mcp",
+    "security",
+    "deploy",
+    "anchorscape"
+  ],
+  "author": "Anchorscape",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AnchorScape/claude-plugin.git"
+  },
+  "homepage": "https://anchorscape.com",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.2",
+    "archiver": "^7.0.1"
+  },
+  "devDependencies": {
+    "@types/archiver": "^6.0.3",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.5.0"
+  },
+  "files": [
+    "dist/",
+    "skills/",
+    ".claude-plugin/",
+    ".mcp.json",
+    "README.md",
+    "LICENSE"
+  ]
+}
