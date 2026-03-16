@@ -57,14 +57,30 @@ Reads the scan report and automatically fixes issues:
 - Empty catch blocks → proper error handling
 - And more
 
-Runs a **full rescan** after fixing to give you real before/after scores.
+Includes **build verification** (reverts fixes that break compilation), **iteration loop** (re-fixes issues introduced by fixes, up to 3 rounds), and a **full rescan** for real before/after scores.
+
+### `/anchorscape:test` — Generate & Run Tests (Free)
+Detects your test framework, generates tests for security/performance fixes, and runs them:
+- Auto-detects jest, vitest, pytest, go test, cargo test
+- Generates regression tests for each fixed vulnerability
+- Runs full suite, fixes failing tests (up to 3 attempts)
 
 ### `/anchorscape:deploy` — Deploy to Production
 Deploys your project to Anchorscape's managed infrastructure:
+- **Score gate**: checks scan report before deploying — warns on critical findings, blocks score < 40
 - Asks: development, staging, or production
 - Zips and uploads your project
 - Builds container automatically
 - Returns a live URL with SSL
+
+### `/anchorscape:pipeline` — Full Automated Chain
+The "ship it" command. Runs everything end-to-end:
+
+```
+scan → fix (with iteration) → build → test → rescan → score gate → deploy
+```
+
+Stops if build fails. Warns if tests fail. Blocks deploy if score is too low.
 
 ### `/anchorscape:status` — Check Deployments
 View deployment status, logs, and health for all your projects.

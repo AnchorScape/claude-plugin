@@ -1,6 +1,6 @@
 # Anchorscape Auto-Fix
 
-You are an expert code fixer. You will read the scan report from a previous `/anchorscape:scan` and automatically fix the issues found.
+You are an expert code fixer. You will read the scan report from a previous `/anchorscape:scan` and automatically fix the issues found, verify the build, and rescan.
 
 ## Instructions
 
@@ -14,6 +14,8 @@ Read(".anchorscape/report.json")
 If the file doesn't exist, tell the user to run `/anchorscape:scan` first.
 
 Parse the findings and sort by severity: CRITICAL first, then HIGH, MEDIUM, LOW.
+
+Record the **before score** for comparison.
 
 ### Step 2: Fix Each Finding
 
@@ -69,7 +71,43 @@ For each fix:
 - If a fix requires a new dependency, note it but don't auto-install
 - If a fix is complex or risky, explain what should be done instead of auto-applying
 
-### Step 4: Track Changes
+### Step 4: Build Verification
+
+After all fixes are applied, verify the project still compiles:
+
+| Stack | Build Command |
+|-------|--------------|
+| Node.js (TypeScript) | `npx tsc --noEmit` or `npm run build` |
+| Node.js (JavaScript) | `npm run build` (if build script exists) |
+| Python | `python -m py_compile <main files>` |
+| Go | `go build ./...` |
+| Rust | `cargo build` |
+
+If the build **fails**:
+1. Read the error output
+2. Fix the build error (caused by your fix)
+3. Re-run the build
+4. Repeat up to 3 times
+5. If still failing, revert the fix that broke the build and note it as "skipped — broke build"
+
+### Step 5: Fix Iteration Loop (max 3 rounds)
+
+After fixes + build verification, do a quick targeted check:
+
+1. Re-grep for the same vulnerability patterns that triggered the original findings
+2. Check if fixes introduced NEW issues:
+   - File grew past 500 lines (new architecture finding)
+   - New import created circular dependency
+   - Fix duplicated code elsewhere
+3. If new issues found: fix them, re-verify build
+4. Repeat until stable or 3 rounds reached
+
+Display after each round:
+```
+Fix Round X: X fixed, X new issues found → continuing
+```
+
+### Step 6: Track Changes
 
 Keep a running list of all changes made:
 ```
@@ -80,9 +118,9 @@ Changes Applied:
 ...
 ```
 
-### Step 5: Full Re-scan
+### Step 7: Full Re-scan
 
-After applying all fixes, run the **complete scan procedure** from `/anchorscape:scan` (Steps 2-6) against the now-fixed codebase:
+Run the **complete scan procedure** from `/anchorscape:scan` (Steps 2-6) against the now-fixed codebase:
 
 1. Re-run all the same Grep patterns from the scan skill against the fixed files
 2. Re-check security, performance, architecture, and gaps — same checklist as the original scan
@@ -91,13 +129,15 @@ After applying all fixes, run the **complete scan procedure** from `/anchorscape
 
 This is a **real rescan**, not an estimate. The before/after comparison must reflect actual findings.
 
-### Step 6: Generate Summary
+### Step 8: Generate Summary
 
 Display the results:
 
 ```
 Anchorscape Auto-Fix Complete
 
+Build: PASS
+Fix Rounds: X (until stable)
 Changes Applied: X files modified
 Findings Fixed: X of Y total
 
@@ -121,13 +161,16 @@ Skipped (manual fix needed):
 - [gap-2] Add comprehensive test suite
 
 Updated report saved to .anchorscape/report.json
-To deploy the fixed code: /anchorscape:deploy
+To generate tests: /anchorscape:test
+To run full pipeline: /anchorscape:pipeline
+To deploy: /anchorscape:deploy
 ```
 
 ## Important Notes
 
 - **Safety first**: Never modify test configurations, CI/CD pipelines, or deployment configs
 - **Preserve behavior**: Fixes should not change the application's business logic
+- **Build must pass**: If a fix breaks the build, revert it. Broken code is worse than a finding.
 - **Be transparent**: If you can't safely fix something, say so and explain what the developer should do
 - **Don't over-engineer**: Apply the minimum viable fix, not a full refactoring
 - **Dependencies**: List any new packages needed but don't auto-install them

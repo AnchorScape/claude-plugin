@@ -4,7 +4,35 @@ Deploy the current project to Anchorscape's managed infrastructure. Your app wil
 
 ## Instructions
 
-### Step 1: Check Authentication
+### Step 1: Score Gate
+
+Check if a scan report exists:
+
+```
+Read(".anchorscape/report.json")
+```
+
+If a report exists, check the score and findings:
+
+- **Score >= 65 and zero CRITICAL findings**: Proceed to deploy.
+- **Score 40-64 OR has CRITICAL findings**: Show a warning with the top issues. Ask the user to confirm before deploying.
+- **Score < 40**: Strongly warn. List all CRITICAL and HIGH findings. Ask the user to confirm they want to deploy anyway.
+- **No report exists**: Note that the project hasn't been scanned. Suggest running `/anchorscape:scan` first, but allow deploy if the user wants to proceed.
+
+Display:
+```
+Pre-deploy Check:
+  Score: XX/100
+  CRITICAL: X | HIGH: X | MEDIUM: X | LOW: X
+
+  [PASS] Ready to deploy
+  OR
+  [WARNING] X critical findings — deploy anyway?
+  OR
+  [NOT SCANNED] Run /anchorscape:scan first for a security check
+```
+
+### Step 2: Check Authentication
 
 Use the `anchorscape_login` MCP tool to check if the user is authenticated:
 
@@ -14,7 +42,7 @@ Use MCP tool: anchorscape_login
 
 If not authenticated, the tool will open a browser for login. Wait for the user to complete authentication.
 
-### Step 2: Ask Deploy Target
+### Step 3: Ask Deploy Target
 
 Ask the user which environment to deploy to:
 
@@ -25,7 +53,9 @@ Ask the user which environment to deploy to:
 
 If the user doesn't specify, default to **development** for first deploys.
 
-### Step 3: Deploy
+**Production guard**: If deploying to production with score < 65, require explicit confirmation: "You're deploying to production with a score of XX/100. Are you sure?"
+
+### Step 4: Deploy
 
 Use the `anchorscape_deploy` MCP tool:
 
@@ -45,7 +75,7 @@ The tool will:
 4. Deploy to Kubernetes
 5. Return the live URL
 
-### Step 4: Show Results
+### Step 5: Show Results
 
 Display the deployment result:
 
@@ -55,6 +85,7 @@ Deployed to Anchorscape!
 URL: https://your-app.anchorscape.com
 Environment: development
 Status: Live
+Score: XX/100
 
 Add this badge to your README:
 [![Deployed on Anchorscape](https://anchorscape.com/api/badge/your-app/status)](https://anchorscape.com)

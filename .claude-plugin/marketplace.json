@@ -4,8 +4,8 @@
   "plugins": [
     {
       "name": "anchorscape",
-      "version": "1.0.0",
-      "description": "Scan, fix, and deploy your code from Claude Code",
+      "version": "1.1.0",
+      "description": "Scan, fix, test, and deploy your code from Claude Code",
       "source": "."
     }
   ]

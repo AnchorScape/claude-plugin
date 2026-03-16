@@ -6,6 +6,6 @@
   "author": "Anchorscape",
   "homepage": "https://anchorscape.com",
   "repository": "https://github.com/anchorscape/claude-plugin",
-  "skills": ["scan", "fix", "deploy", "status"],
+  "skills": ["scan", "fix", "test", "deploy", "status", "pipeline"],
   "mcp": true
 }
