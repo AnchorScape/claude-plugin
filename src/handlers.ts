@@ -8,7 +8,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { createServer } from 'http';
 import * as crypto from 'crypto';
 import archiver from 'archiver';
 
@@ -250,80 +249,6 @@ async function zipDirectory(dir: string): Promise<{ buffer: Buffer; fileCount: n
 }
 
 // ============================================================================
-// ANSI TERMINAL OUTPUT (stderr — bypasses Claude's markdown rendering)
-// ============================================================================
-
-const ANSI = {
-  reset: '\x1b[0m',
-  bold: '\x1b[1m',
-  dim: '\x1b[2m',
-  blue: '\x1b[34m',
-  cyan: '\x1b[36m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  red: '\x1b[31m',
-  magenta: '\x1b[35m',
-  bgBlue: '\x1b[44m',
-  white: '\x1b[37m',
-};
-
-function stderrBanner(tool: string): void {
-  const banners: Record<string, string> = {
-    deploy: `
-${ANSI.blue}${ANSI.bold}  ╔═══════════════════════════════════╗
-  ║        ⚓  ANCHORSCAPE             ║
-  ║          D E P L O Y              ║
-  ╚═══════════════════════════════════╝${ANSI.reset}`,
-
-    login: `
-${ANSI.magenta}${ANSI.bold}  ╔═══════════════════════════════════╗
-  ║        ⚓  ANCHORSCAPE             ║
-  ║            L O G I N              ║
-  ╚═══════════════════════════════════╝${ANSI.reset}`,
-
-    status: `
-${ANSI.cyan}${ANSI.bold}  ╔═══════════════════════════════════╗
-  ║        ⚓  ANCHORSCAPE             ║
-  ║           S T A T U S             ║
-  ╚═══════════════════════════════════╝${ANSI.reset}`,
-
-    logs: `
-${ANSI.dim}  ╔═══════════════════════════════════╗
-  ║        ⚓  ANCHORSCAPE             ║
-  ║             L O G S               ║
-  ╚═══════════════════════════════════╝${ANSI.reset}`,
-
-    projects: `
-${ANSI.cyan}${ANSI.bold}  ╔═══════════════════════════════════╗
-  ║        ⚓  ANCHORSCAPE             ║
-  ║        P R O J E C T S           ║
-  ╚═══════════════════════════════════╝${ANSI.reset}`,
-  };
-
-  const banner = banners[tool];
-  if (banner) {
-    console.error(banner);
-    console.error('');
-  }
-}
-
-function stderrStatus(message: string, color: string = ANSI.blue): void {
-  console.error(`${color}  ▸ ${message}${ANSI.reset}`);
-}
-
-function stderrSuccess(message: string): void {
-  console.error(`${ANSI.green}  ✓ ${message}${ANSI.reset}`);
-}
-
-function stderrError(message: string): void {
-  console.error(`${ANSI.red}  ✗ ${message}${ANSI.reset}`);
-}
-
-function stderrStep(step: number, total: number, message: string): void {
-  console.error(`${ANSI.blue}  [${step}/${total}]${ANSI.reset} ${message}`);
-}
-
-// ============================================================================
 // HANDLERS
 // ============================================================================
 
@@ -335,17 +260,13 @@ export async function handleDeploy(
   environment: 'development' | 'staging' | 'production' = 'development',
   projectName?: string,
 ): Promise<string> {
-  stderrBanner('deploy');
-
   // Validate directory
   if (!fs.existsSync(directory) || !fs.statSync(directory).isDirectory()) {
-    stderrError(`Directory not found: ${directory}`);
     throw new Error(`Directory not found: ${directory}`);
   }
 
   // Check auth
   requireAuth();
-  stderrStatus('Authenticated');
 
   // Detect project name
   if (!projectName) {
@@ -365,13 +286,9 @@ export async function handleDeploy(
     .slice(0, 40);
   projectName = cleanName;
 
-  stderrStatus(`Project: ${projectName} → ${environment}`);
-
   // ZIP the directory
-  stderrStep(1, 4, 'Packaging project...');
   const { buffer, fileCount } = await zipDirectory(directory);
   const sizeMB = (buffer.length / 1024 / 1024).toFixed(1);
-  stderrSuccess(`Packaged ${fileCount} files (${sizeMB} MB)`);
 
   if (buffer.length > 100 * 1024 * 1024) {
     throw new Error(`Project is too large (${sizeMB} MB, max 100 MB). Add large files to .gitignore or .anchorignore.`);
@@ -393,7 +310,6 @@ export async function handleDeploy(
   } catch { /* first deploy, no existing project */ }
 
   // Upload
-  stderrStep(2, 4, 'Uploading to Anchorscape...');
   const formData = new FormData();
   formData.append('file', new Blob([new Uint8Array(buffer)]), 'project.zip');
 
@@ -420,9 +336,6 @@ export async function handleDeploy(
     environmentId?: string;
   };
 
-  stderrSuccess('Uploaded');
-  stderrStep(3, 4, 'Building container...');
-
   // Wait for deployment to complete (poll instead of SSE for MCP compatibility)
   const deploymentId = deployData.deploymentId;
   const maxWait = 300_000; // 5 minutes
@@ -443,15 +356,12 @@ export async function handleDeploy(
       if (dep.status === 'completed') {
         finalStatus = 'completed';
         finalUrl = dep.externalUrl || dep.deployedUrls?.[0] || `https://${projectName}.anchorscape.com`;
-        stderrStep(4, 4, 'Deploying...');
-        stderrSuccess('Deployed');
         break;
       }
 
       if (dep.status === 'failed') {
         finalStatus = 'failed';
         errorMessage = dep.errorMessage || 'Unknown error';
-        stderrError(`Deploy failed: ${errorMessage}`);
         break;
       }
 
@@ -462,10 +372,6 @@ export async function handleDeploy(
   }
 
   if (finalStatus === 'completed') {
-    console.error('');
-    console.error(`${ANSI.green}${ANSI.bold}  ✓ LIVE${ANSI.reset} ${ANSI.cyan}${finalUrl}${ANSI.reset}`);
-    console.error('');
-
     const lines = [
       '# Deployed Successfully!',
       '',
@@ -497,10 +403,15 @@ export async function handleDeploy(
 }
 
 /**
- * Login via browser OAuth
+ * Login via browser OAuth (polling-based — works in WSL2, SSH, Docker, etc.)
+ *
+ * Flow:
+ * 1. Create a pending auth session on the server
+ * 2. Open browser to auth page referencing that session
+ * 3. User authorizes in browser → server stores token
+ * 4. MCP polls server until token is available
  */
 export async function handleLogin(apiUrl?: string): Promise<string> {
-  stderrBanner('login');
   let baseUrl = apiUrl || process.env.ANCHOR_API_URL || 'https://anchorscape.com';
 
   // Validate apiUrl against the same allowlist used by getBaseUrl()
@@ -520,7 +431,6 @@ export async function handleLogin(apiUrl?: string): Promise<string> {
   // Check if already logged in
   const existing = loadCredentials();
   if (existing && !isTokenExpired(existing)) {
-    stderrSuccess(`Logged in as ${existing.email}`);
     return [
       `Already logged in as **${existing.email}**`,
       `API: ${existing.apiUrl}`,
@@ -529,98 +439,107 @@ export async function handleLogin(apiUrl?: string): Promise<string> {
     ].join('\n');
   }
 
-  // Start local callback server
-  const state = crypto.randomBytes(32).toString('hex');
-
-  const result = await new Promise<{ email: string; name: string; token: string; expiresAt: string } | null>((resolve) => {
-    const timeout = setTimeout(() => {
-      server.close();
-      resolve(null);
-    }, 120_000);
-
-    const server = createServer((req, res) => {
-      const reqUrl = new URL(req.url!, 'http://localhost');
-
-      if (reqUrl.pathname === '/callback') {
-        const token = reqUrl.searchParams.get('token');
-        const returnedState = reqUrl.searchParams.get('state');
-        const email = reqUrl.searchParams.get('email') || '';
-        const name = reqUrl.searchParams.get('name') || '';
-        const expiresAt = reqUrl.searchParams.get('expiresAt') || '';
-
-        if (returnedState !== state || !token) {
-          res.writeHead(400, { 'Content-Type': 'text/html' });
-          res.end('<html><body><h2>Authorization failed</h2><p>Please try again.</p></body></html>');
-          return;
-        }
-
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(`<html>
-          <head><style>
-            body { font-family: -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #0b1437; color: white; }
-            .card { text-align: center; padding: 2rem; }
-            .check { color: #05cd99; font-size: 48px; }
-          </style></head>
-          <body><div class="card">
-            <div class="check">&#10003;</div>
-            <h2>Logged in to Anchorscape!</h2>
-            <p>You can close this tab and return to Claude Code.</p>
-          </div></body>
-        </html>`);
-
-        clearTimeout(timeout);
-        server.close();
-        resolve({ email, name, token, expiresAt });
-      } else {
-        res.writeHead(404);
-        res.end('Not found');
-      }
-    });
-
-    server.listen(0, '127.0.0.1', () => {
-      const addr = server.address();
-      if (!addr || typeof addr === 'string') {
-        resolve(null);
-        return;
-      }
-
-      const port = addr.port;
-      const authUrl = `${baseUrl}/cli/auth?port=${port}&state=${state}`;
-
-      // Try to open browser (use execFile to prevent command injection)
-      import('child_process').then(({ execFile }) => {
-        if (process.platform === 'win32') {
-          // 'start' is a cmd.exe builtin, not a standalone executable
-          execFile('cmd.exe', ['/c', 'start', '', authUrl], { timeout: 5000 }, () => {});
-        } else {
-          const openCmd = process.platform === 'darwin' ? 'open' : 'xdg-open';
-          execFile(openCmd, [authUrl], { timeout: 5000 }, () => {});
-        }
-      }).catch(() => {});
-
-      // Also return the URL in case browser doesn't open
-      console.error(`Open this URL to log in: ${authUrl}`);
-    });
+  // Create a pending auth session on the server
+  const sessionRes = await fetch(`${baseUrl}/api/auth/cli/session`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
   });
 
-  if (!result) {
-    throw new Error('Login timed out. Please try again.');
+  if (!sessionRes.ok) {
+    throw new Error('Failed to create auth session. Is the Anchorscape server reachable?');
   }
 
-  saveCredentials({
-    token: result.token,
-    email: result.email,
-    name: result.name,
-    expiresAt: result.expiresAt,
-    apiUrl: baseUrl,
-  });
+  const { sessionId } = await sessionRes.json() as { sessionId: string };
+  const authUrl = `${baseUrl}/cli/auth?session=${sessionId}`;
 
-  stderrSuccess(`Logged in as ${result.email}`);
+  // Try to open browser (WSL/macOS/Linux/Windows)
+  import('child_process').then(({ execFile }) => {
+    const isWSL = (() => {
+      try {
+        return fs.readFileSync('/proc/version', 'utf-8').toLowerCase().includes('microsoft');
+      } catch {
+        return false;
+      }
+    })();
 
+    if (process.platform === 'win32') {
+      execFile('cmd.exe', ['/c', 'start', '', authUrl], { timeout: 5000 }, () => {});
+    } else if (isWSL) {
+      execFile('wslview', [authUrl], { timeout: 5000 }, (err) => {
+        if (err) {
+          execFile('cmd.exe', ['/c', 'start', '', authUrl], { timeout: 5000 }, () => {});
+        }
+      });
+    } else if (process.platform === 'darwin') {
+      execFile('open', [authUrl], { timeout: 5000 }, () => {});
+    } else {
+      execFile('xdg-open', [authUrl], { timeout: 5000 }, () => {});
+    }
+  }).catch(() => {});
+
+  console.error(`\x1b[34m[auth]\x1b[0m Opening browser for login...`);
+  console.error(`\x1b[34m[auth]\x1b[0m URL: ${authUrl}`);
+
+  // Poll for completion
+  const maxWait = 120_000; // 2 minutes
+  const pollInterval = 2_000; // 2 seconds
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < maxWait) {
+    await new Promise(r => setTimeout(r, pollInterval));
+
+    try {
+      const statusRes = await fetch(
+        `${baseUrl}/api/auth/cli/session/${sessionId}/status`
+      );
+
+      if (!statusRes.ok) continue;
+
+      const data = await statusRes.json() as {
+        status: 'pending' | 'completed' | 'expired';
+        token?: string;
+        email?: string;
+        name?: string;
+        expiresAt?: string;
+      };
+
+      if (data.status === 'completed' && data.token) {
+        saveCredentials({
+          token: data.token,
+          email: data.email || '',
+          name: data.name || '',
+          expiresAt: data.expiresAt || '',
+          apiUrl: baseUrl,
+        });
+
+        console.error(`\x1b[32m[auth]\x1b[0m Logged in as ${data.email}`);
+
+        return [
+          `Logged in as **${data.email}**`,
+          '',
+          'You can now use anchorscape_deploy to deploy your projects.',
+        ].join('\n');
+      }
+
+      if (data.status === 'expired') {
+        break;
+      }
+
+      // status === 'pending' — keep polling
+    } catch {
+      // Network hiccup — keep polling
+    }
+  }
+
+  // Timeout or expired
   return [
-    `Logged in as **${result.email}**`,
+    '**Login was not completed in time.**',
     '',
-    'You can now use anchorscape_deploy to deploy your projects.',
+    'Please open this URL in your browser to log in:',
+    '',
+    authUrl,
+    '',
+    'After authorizing, run this tool again.',
   ].join('\n');
 }
 
@@ -631,7 +550,6 @@ export async function handleStatus(
   projectName?: string,
   environmentId?: string,
 ): Promise<string> {
-  stderrBanner('status');
   requireAuth();
 
   // If specific environment given
@@ -711,7 +629,6 @@ export async function handleLogs(
   environmentId: string,
   lines: number = 50,
 ): Promise<string> {
-  stderrBanner('logs');
   requireAuth();
 
   // Clamp lines to prevent abuse
@@ -737,6 +654,5 @@ export async function handleLogs(
  * List all projects
  */
 export async function handleProjects(): Promise<string> {
-  stderrBanner('projects');
   return handleStatus();
 }
