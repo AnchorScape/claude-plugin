@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-"use strict";
 /**
  * Anchorscape MCP Server
  *
@@ -18,11 +17,10 @@
  *   npx @anchorscape/claude-plugin
  *   OR: node dist/mcp/index.js
  */
-Object.defineProperty(exports, "__esModule", { value: true });
-const index_js_1 = require("@modelcontextprotocol/sdk/server/index.js");
-const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
-const types_js_1 = require("@modelcontextprotocol/sdk/types.js");
-const handlers_js_1 = require("./handlers.js");
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { CallToolRequestSchema, ListToolsRequestSchema, ErrorCode, McpError, } from '@modelcontextprotocol/sdk/types.js';
+import { handleDeploy, handleLogin, handleStatus, handleLogs, handleProjects, } from './handlers.js';
 // ============================================================================
 // TOOL DEFINITIONS
 // ============================================================================
@@ -156,7 +154,7 @@ Use this to find environment IDs for the status and logs tools.`,
 // MCP SERVER
 // ============================================================================
 async function main() {
-    const server = new index_js_1.Server({
+    const server = new Server({
         name: 'anchorscape',
         version: '1.0.0',
     }, {
@@ -165,11 +163,11 @@ async function main() {
         },
     });
     // List available tools
-    server.setRequestHandler(types_js_1.ListToolsRequestSchema, async () => {
+    server.setRequestHandler(ListToolsRequestSchema, async () => {
         return { tools: TOOLS };
     });
     // Handle tool calls
-    server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const { name, arguments: args } = request.params;
         try {
             let result;
@@ -177,7 +175,7 @@ async function main() {
                 case 'anchorscape_deploy': {
                     const { directory, environment = 'development', projectName } = args;
                     if (!directory || typeof directory !== 'string') {
-                        throw new types_js_1.McpError(types_js_1.ErrorCode.InvalidParams, 'directory is required');
+                        throw new McpError(ErrorCode.InvalidParams, 'directory is required');
                     }
                     // Extract progress token for MCP progress notifications (if supported by client)
                     const progressToken = request.params._meta?.progressToken;
@@ -196,47 +194,47 @@ async function main() {
                             }).catch(() => { }); // Best-effort, don't break deploy on notification failure
                         }
                         : undefined;
-                    result = await (0, handlers_js_1.handleDeploy)(directory, environment, projectName, onProgress);
+                    result = await handleDeploy(directory, environment, projectName, onProgress);
                     break;
                 }
                 case 'anchorscape_login': {
                     const { apiUrl } = (args || {});
-                    result = await (0, handlers_js_1.handleLogin)(apiUrl);
+                    result = await handleLogin(apiUrl);
                     break;
                 }
                 case 'anchorscape_status': {
                     const { projectName, environmentId } = (args || {});
-                    result = await (0, handlers_js_1.handleStatus)(projectName, environmentId);
+                    result = await handleStatus(projectName, environmentId);
                     break;
                 }
                 case 'anchorscape_logs': {
                     const { environmentId, lines = 50 } = args;
                     if (!environmentId || typeof environmentId !== 'string') {
-                        throw new types_js_1.McpError(types_js_1.ErrorCode.InvalidParams, 'environmentId is required');
+                        throw new McpError(ErrorCode.InvalidParams, 'environmentId is required');
                     }
-                    result = await (0, handlers_js_1.handleLogs)(environmentId, Math.min(lines, 500));
+                    result = await handleLogs(environmentId, Math.min(lines, 500));
                     break;
                 }
                 case 'anchorscape_projects': {
-                    result = await (0, handlers_js_1.handleProjects)();
+                    result = await handleProjects();
                     break;
                 }
                 default:
-                    throw new types_js_1.McpError(types_js_1.ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
+                    throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
             }
             return {
                 content: [{ type: 'text', text: result }],
             };
         }
         catch (error) {
-            if (error instanceof types_js_1.McpError)
+            if (error instanceof McpError)
                 throw error;
             const message = error instanceof Error ? error.message : String(error);
-            throw new types_js_1.McpError(types_js_1.ErrorCode.InternalError, message);
+            throw new McpError(ErrorCode.InternalError, message);
         }
     });
     // Start the server
-    const transport = new stdio_js_1.StdioServerTransport();
+    const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error('Anchorscape MCP server started');
 }

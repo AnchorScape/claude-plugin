@@ -1,56 +1,13 @@
-"use strict";
 /**
  * MCP Tool Handlers — Deploy-focused
  *
  * Handles deploy, auth, status, logs, and project listing.
  * Reuses patterns from the CLI (cli/src/) but adapted for MCP context.
  */
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.handleDeploy = handleDeploy;
-exports.handleLogin = handleLogin;
-exports.handleStatus = handleStatus;
-exports.handleLogs = handleLogs;
-exports.handleProjects = handleProjects;
-const fs = __importStar(require("fs"));
-const path = __importStar(require("path"));
-const os = __importStar(require("os"));
-const archiver_1 = __importDefault(require("archiver"));
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+import archiver from 'archiver';
 const CONFIG_DIR = path.join(os.homedir(), '.config', 'anchorscape');
 const CREDENTIALS_FILE = path.join(CONFIG_DIR, 'credentials.json');
 function loadCredentials() {
@@ -212,7 +169,7 @@ async function zipDirectory(dir) {
     return new Promise((resolve, reject) => {
         const chunks = [];
         let fileCount = 0;
-        const archive = (0, archiver_1.default)('zip', { zlib: { level: 6 } });
+        const archive = archiver('zip', { zlib: { level: 6 } });
         archive.on('data', (chunk) => chunks.push(chunk));
         archive.on('error', reject);
         archive.on('end', () => {
@@ -281,7 +238,7 @@ function saveAnchorState(directory, state) {
     }
     catch { /* best effort */ }
 }
-async function handleDeploy(directory, environment = 'development', projectName, onProgress) {
+export async function handleDeploy(directory, environment = 'development', projectName, onProgress) {
     // Validate directory
     if (!fs.existsSync(directory) || !fs.statSync(directory).isDirectory()) {
         throw new Error(`Directory not found: ${directory}`);
@@ -383,8 +340,8 @@ async function handleDeploy(directory, environment = 'development', projectName,
     }
     // Wait for deployment to complete (poll instead of SSE for MCP compatibility)
     const deploymentId = deployData.deploymentId;
-    const maxWait = 300000; // 5 minutes
-    const pollInterval = 5000; // 5 seconds
+    const maxWait = 300_000; // 5 minutes
+    const pollInterval = 5_000; // 5 seconds
     const startTime = Date.now();
     let finalStatus = 'unknown';
     let finalUrl = '';
@@ -547,7 +504,7 @@ async function handleDeploy(directory, environment = 'development', projectName,
  * 3. User authorizes in browser → server stores token
  * 4. MCP polls server until token is available
  */
-async function handleLogin(apiUrl) {
+export async function handleLogin(apiUrl) {
     let baseUrl = apiUrl || process.env.ANCHOR_API_URL || 'https://anchorscape.com';
     // Validate apiUrl against the same allowlist used by getBaseUrl()
     try {
@@ -584,7 +541,7 @@ async function handleLogin(apiUrl) {
     const { sessionId } = await sessionRes.json();
     const authUrl = `${baseUrl}/cli/auth?session=${sessionId}`;
     // Try to open browser (WSL/macOS/Linux/Windows)
-    Promise.resolve().then(() => __importStar(require('child_process'))).then(({ execFile }) => {
+    import('child_process').then(({ execFile }) => {
         const isWSL = (() => {
             try {
                 return fs.readFileSync('/proc/version', 'utf-8').toLowerCase().includes('microsoft');
@@ -613,8 +570,8 @@ async function handleLogin(apiUrl) {
     console.error(`\x1b[34m[auth]\x1b[0m Opening browser for login...`);
     console.error(`\x1b[34m[auth]\x1b[0m URL: ${authUrl}`);
     // Poll for completion
-    const maxWait = 120000; // 2 minutes
-    const pollInterval = 2000; // 2 seconds
+    const maxWait = 120_000; // 2 minutes
+    const pollInterval = 2_000; // 2 seconds
     const startTime = Date.now();
     while (Date.now() - startTime < maxWait) {
         await new Promise(r => setTimeout(r, pollInterval));
@@ -661,7 +618,7 @@ async function handleLogin(apiUrl) {
 /**
  * Check deployment status
  */
-async function handleStatus(projectName, environmentId) {
+export async function handleStatus(projectName, environmentId) {
     requireAuth();
     // If specific environment given
     if (environmentId) {
@@ -722,7 +679,7 @@ function formatEnvironmentStatus(env) {
 /**
  * Get logs for a deployment
  */
-async function handleLogs(environmentId, lines = 50) {
+export async function handleLogs(environmentId, lines = 50) {
     requireAuth();
     // Clamp lines to prevent abuse
     const clampedLines = Math.max(1, Math.min(lines, 500));
@@ -742,6 +699,6 @@ async function handleLogs(environmentId, lines = 50) {
 /**
  * List all projects
  */
-async function handleProjects() {
+export async function handleProjects() {
     return handleStatus();
 }
