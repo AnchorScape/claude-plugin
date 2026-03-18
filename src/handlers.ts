@@ -129,8 +129,11 @@ const ALWAYS_EXCLUDE = [
   'node_modules',
   '.anchor',
   '.anchorscape',
+  '.claude',
+  '.claude-plugin',
   '.DS_Store',
   'Thumbs.db',
+  '__MACOSX',
   '__pycache__',
   '.venv',
   'venv',
@@ -139,6 +142,11 @@ const ALWAYS_EXCLUDE = [
   'dist',
   'build',
   'coverage',
+  'generated',        // Prisma client, GraphQL codegen, etc — rebuilt at build time
+  '.prisma',
+  '.turbo',
+  '.parcel-cache',
+  '.cache',
   '.env',
   '.env.local',
   '.env.production',
@@ -335,8 +343,10 @@ export async function handleDeploy(
   projectName = cleanName;
 
   // ZIP the directory
+  console.error(`\x1b[34m[deploy]\x1b[0m Packaging ${projectName}...`);
   const { buffer, fileCount } = await zipDirectory(directory);
   const sizeMB = (buffer.length / 1024 / 1024).toFixed(1);
+  console.error(`\x1b[34m[deploy]\x1b[0m Packaged ${fileCount} files (${sizeMB} MB)`);
 
   if (buffer.length > 100 * 1024 * 1024) {
     throw new Error(`Project is too large (${sizeMB} MB, max 100 MB). Add large files to .gitignore or .anchorignore.`);
@@ -345,15 +355,19 @@ export async function handleDeploy(
   // --- Resolve environment ID ---
   // Priority: 1) local .anchorscape/project.json  2) API lookup by name  3) auto-create
   let environmentId: string | null = null;
+  let isRedeployment = false;
 
   // 1) Check local anchor state (fastest, unambiguous)
   const anchorState = loadAnchorState(directory);
   if (anchorState?.environmentId) {
+    console.error(`\x1b[34m[deploy]\x1b[0m Found existing environment from .anchorscape/project.json`);
     // Verify it still exists on the server
     try {
       await apiJSON('GET', `/api/k3s/environments/${anchorState.environmentId}`);
       environmentId = anchorState.environmentId;
+      isRedeployment = true;
     } catch {
+      console.error(`\x1b[33m[deploy]\x1b[0m Previous environment was deleted, creating new one`);
       // Environment was deleted — clear stale state, will auto-create below
     }
   }
@@ -367,11 +381,18 @@ export async function handleDeploy(
       const match = envs.find((e: any) => e.displayName === projectName);
       if (match) {
         environmentId = match.id;
+        isRedeployment = true;
+        console.error(`\x1b[34m[deploy]\x1b[0m Found existing environment by name: ${projectName}`);
       }
     } catch { /* first deploy, no existing environments */ }
   }
 
+  if (!isRedeployment) {
+    console.error(`\x1b[34m[deploy]\x1b[0m First deploy — creating new environment`);
+  }
+
   // Upload
+  console.error(`\x1b[34m[deploy]\x1b[0m Uploading ${sizeMB} MB to Anchorscape...`);
   const formData = new FormData();
   formData.append('file', new Blob([new Uint8Array(buffer)]), 'project.zip');
 
@@ -399,6 +420,8 @@ export async function handleDeploy(
     environmentId?: string;
   };
 
+  console.error(`\x1b[32m[deploy]\x1b[0m Upload complete — build started`);
+
   // Save environment ID locally for future deploys
   const resolvedEnvId = deployData.environmentId || environmentId;
   if (resolvedEnvId) {
@@ -419,6 +442,7 @@ export async function handleDeploy(
   let finalStatus = 'unknown';
   let finalUrl = '';
   let errorMessage = '';
+  let lastLoggedStatus = '';
 
   while (Date.now() - startTime < maxWait) {
     await new Promise(r => setTimeout(r, pollInterval));
@@ -426,6 +450,20 @@ export async function handleDeploy(
     try {
       const statusRes = await apiJSON('GET', `/api/k3s/deployments/${deploymentId}`);
       const dep = statusRes.deployment;
+
+      // Log status changes so the user sees progress
+      if (dep.status !== lastLoggedStatus) {
+        lastLoggedStatus = dep.status;
+        const elapsed = Math.round((Date.now() - startTime) / 1000);
+        const statusLabels: Record<string, string> = {
+          queued: 'Queued...',
+          building: 'Building container image...',
+          deploying: 'Deploying to cluster...',
+          verifying: 'Verifying health checks...',
+        };
+        const label = statusLabels[dep.status] || dep.status;
+        console.error(`\x1b[34m[deploy]\x1b[0m ${label} (${elapsed}s)`);
+      }
 
       if (dep.status === 'completed') {
         finalStatus = 'completed';
@@ -454,6 +492,10 @@ export async function handleDeploy(
       url: finalUrl,
       createdAt: anchorState?.createdAt || new Date().toISOString(),
     });
+    const elapsed = Math.round((Date.now() - startTime) / 1000);
+    console.error(`\x1b[32m[deploy]\x1b[0m Live at ${finalUrl} (${elapsed}s)`);
+  } else if (finalStatus === 'failed') {
+    console.error(`\x1b[31m[deploy]\x1b[0m Failed: ${errorMessage}`);
   }
 
   if (finalStatus === 'completed') {
