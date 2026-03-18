@@ -1,13 +1,56 @@
+"use strict";
 /**
  * MCP Tool Handlers — Deploy-focused
  *
  * Handles deploy, auth, status, logs, and project listing.
  * Reuses patterns from the CLI (cli/src/) but adapted for MCP context.
  */
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-import archiver from 'archiver';
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.handleDeploy = handleDeploy;
+exports.handleLogin = handleLogin;
+exports.handleStatus = handleStatus;
+exports.handleLogs = handleLogs;
+exports.handleProjects = handleProjects;
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
+const os = __importStar(require("os"));
+const archiver_1 = __importDefault(require("archiver"));
 const CONFIG_DIR = path.join(os.homedir(), '.config', 'anchorscape');
 const CREDENTIALS_FILE = path.join(CONFIG_DIR, 'credentials.json');
 function loadCredentials() {
@@ -94,8 +137,11 @@ const ALWAYS_EXCLUDE = [
     'node_modules',
     '.anchor',
     '.anchorscape',
+    '.claude',
+    '.claude-plugin',
     '.DS_Store',
     'Thumbs.db',
+    '__MACOSX',
     '__pycache__',
     '.venv',
     'venv',
@@ -104,6 +150,11 @@ const ALWAYS_EXCLUDE = [
     'dist',
     'build',
     'coverage',
+    'generated', // Prisma client, GraphQL codegen, etc — rebuilt at build time
+    '.prisma',
+    '.turbo',
+    '.parcel-cache',
+    '.cache',
     '.env',
     '.env.local',
     '.env.production',
@@ -161,7 +212,7 @@ async function zipDirectory(dir) {
     return new Promise((resolve, reject) => {
         const chunks = [];
         let fileCount = 0;
-        const archive = archiver('zip', { zlib: { level: 6 } });
+        const archive = (0, archiver_1.default)('zip', { zlib: { level: 6 } });
         archive.on('data', (chunk) => chunks.push(chunk));
         archive.on('error', reject);
         archive.on('end', () => {
@@ -203,13 +254,34 @@ async function zipDirectory(dir) {
         archive.finalize();
     });
 }
-// ============================================================================
-// HANDLERS
-// ============================================================================
-/**
- * Deploy a project directory
- */
-export async function handleDeploy(directory, environment = 'development', projectName) {
+function loadAnchorState(directory) {
+    try {
+        const statePath = path.join(directory, '.anchorscape', 'project.json');
+        const data = fs.readFileSync(statePath, 'utf-8');
+        return JSON.parse(data);
+    }
+    catch {
+        return null;
+    }
+}
+function saveAnchorState(directory, state) {
+    const stateDir = path.join(directory, '.anchorscape');
+    fs.mkdirSync(stateDir, { recursive: true });
+    fs.writeFileSync(path.join(stateDir, 'project.json'), JSON.stringify(state, null, 2));
+    // Auto-add .anchorscape to .gitignore if not already there
+    const gitignorePath = path.join(directory, '.gitignore');
+    try {
+        const existing = fs.existsSync(gitignorePath)
+            ? fs.readFileSync(gitignorePath, 'utf-8')
+            : '';
+        if (!existing.includes('.anchorscape')) {
+            const newline = existing.endsWith('\n') || existing === '' ? '' : '\n';
+            fs.appendFileSync(gitignorePath, `${newline}.anchorscape/\n`);
+        }
+    }
+    catch { /* best effort */ }
+}
+async function handleDeploy(directory, environment = 'development', projectName) {
     // Validate directory
     if (!fs.existsSync(directory) || !fs.statSync(directory).isDirectory()) {
         throw new Error(`Directory not found: ${directory}`);
@@ -234,31 +306,59 @@ export async function handleDeploy(directory, environment = 'development', proje
         .slice(0, 40);
     projectName = cleanName;
     // ZIP the directory
+    console.error(`\x1b[34m[deploy]\x1b[0m Packaging ${projectName}...`);
     const { buffer, fileCount } = await zipDirectory(directory);
     const sizeMB = (buffer.length / 1024 / 1024).toFixed(1);
+    console.error(`\x1b[34m[deploy]\x1b[0m Packaged ${fileCount} files (${sizeMB} MB)`);
     if (buffer.length > 100 * 1024 * 1024) {
         throw new Error(`Project is too large (${sizeMB} MB, max 100 MB). Add large files to .gitignore or .anchorignore.`);
     }
-    // Check if project/environment already exists
+    // --- Resolve environment ID ---
+    // Priority: 1) local .anchorscape/project.json  2) API lookup by name  3) auto-create
     let environmentId = null;
-    try {
-        const projects = await apiJSON('GET', '/api/k3s/projects');
-        const existingProject = projects.projects?.find((p) => p.name === projectName || p.displayName === projectName);
-        if (existingProject) {
-            const env = existingProject.environments?.find((e) => e.name === environment);
-            if (env) {
-                environmentId = env.id;
-            }
+    let isRedeployment = false;
+    // 1) Check local anchor state (fastest, unambiguous)
+    const anchorState = loadAnchorState(directory);
+    if (anchorState?.environmentId) {
+        console.error(`\x1b[34m[deploy]\x1b[0m Found existing environment from .anchorscape/project.json`);
+        // Verify it still exists on the server
+        try {
+            await apiJSON('GET', `/api/k3s/environments/${anchorState.environmentId}`);
+            environmentId = anchorState.environmentId;
+            isRedeployment = true;
+        }
+        catch {
+            console.error(`\x1b[33m[deploy]\x1b[0m Previous environment was deleted, creating new one`);
+            // Environment was deleted — clear stale state, will auto-create below
         }
     }
-    catch { /* first deploy, no existing project */ }
+    // 2) Fallback: search user's environments by displayName
+    if (!environmentId) {
+        try {
+            const data = await apiJSON('GET', '/api/k3s/environments');
+            const envs = data.environments || [];
+            // Match by displayName (set during auto-create) — scoped to this user's JWT
+            const match = envs.find((e) => e.displayName === projectName);
+            if (match) {
+                environmentId = match.id;
+                isRedeployment = true;
+                console.error(`\x1b[34m[deploy]\x1b[0m Found existing environment by name: ${projectName}`);
+            }
+        }
+        catch { /* first deploy, no existing environments */ }
+    }
+    if (!isRedeployment) {
+        console.error(`\x1b[34m[deploy]\x1b[0m First deploy — creating new environment`);
+    }
     // Upload
+    console.error(`\x1b[34m[deploy]\x1b[0m Uploading ${sizeMB} MB to Anchorscape...`);
     const formData = new FormData();
     formData.append('file', new Blob([new Uint8Array(buffer)]), 'project.zip');
     if (environmentId) {
         formData.append('environmentId', environmentId);
     }
     else {
+        // 3) No existing environment — auto-create
         formData.append('autoCreateEnvironment', 'true');
         formData.append('displayName', projectName);
     }
@@ -270,19 +370,44 @@ export async function handleDeploy(directory, environment = 'development', proje
         throw new Error(`Upload failed: ${data.error || data.message || `HTTP ${uploadRes.status}`}`);
     }
     const deployData = await uploadRes.json();
+    console.error(`\x1b[32m[deploy]\x1b[0m Upload complete — build started`);
+    // Save environment ID locally for future deploys
+    const resolvedEnvId = deployData.environmentId || environmentId;
+    if (resolvedEnvId) {
+        saveAnchorState(directory, {
+            environmentId: resolvedEnvId,
+            projectName: projectName,
+            environmentName: environment,
+            createdAt: anchorState?.createdAt || new Date().toISOString(),
+        });
+    }
     // Wait for deployment to complete (poll instead of SSE for MCP compatibility)
     const deploymentId = deployData.deploymentId;
-    const maxWait = 300_000; // 5 minutes
-    const pollInterval = 5_000; // 5 seconds
+    const maxWait = 300000; // 5 minutes
+    const pollInterval = 5000; // 5 seconds
     const startTime = Date.now();
     let finalStatus = 'unknown';
     let finalUrl = '';
     let errorMessage = '';
+    let lastLoggedStatus = '';
     while (Date.now() - startTime < maxWait) {
         await new Promise(r => setTimeout(r, pollInterval));
         try {
             const statusRes = await apiJSON('GET', `/api/k3s/deployments/${deploymentId}`);
             const dep = statusRes.deployment;
+            // Log status changes so the user sees progress
+            if (dep.status !== lastLoggedStatus) {
+                lastLoggedStatus = dep.status;
+                const elapsed = Math.round((Date.now() - startTime) / 1000);
+                const statusLabels = {
+                    queued: 'Queued...',
+                    building: 'Building container image...',
+                    deploying: 'Deploying to cluster...',
+                    verifying: 'Verifying health checks...',
+                };
+                const label = statusLabels[dep.status] || dep.status;
+                console.error(`\x1b[34m[deploy]\x1b[0m ${label} (${elapsed}s)`);
+            }
             if (dep.status === 'completed') {
                 finalStatus = 'completed';
                 finalUrl = dep.externalUrl || dep.deployedUrls?.[0] || `https://${projectName}.anchorscape.com`;
@@ -298,6 +423,21 @@ export async function handleDeploy(directory, environment = 'development', proje
         catch {
             // Network hiccup, keep polling
         }
+    }
+    // Update local state with URL
+    if (finalStatus === 'completed' && resolvedEnvId) {
+        saveAnchorState(directory, {
+            environmentId: resolvedEnvId,
+            projectName: projectName,
+            environmentName: environment,
+            url: finalUrl,
+            createdAt: anchorState?.createdAt || new Date().toISOString(),
+        });
+        const elapsed = Math.round((Date.now() - startTime) / 1000);
+        console.error(`\x1b[32m[deploy]\x1b[0m Live at ${finalUrl} (${elapsed}s)`);
+    }
+    else if (finalStatus === 'failed') {
+        console.error(`\x1b[31m[deploy]\x1b[0m Failed: ${errorMessage}`);
     }
     if (finalStatus === 'completed') {
         const lines = [
@@ -340,7 +480,7 @@ export async function handleDeploy(directory, environment = 'development', proje
  * 3. User authorizes in browser → server stores token
  * 4. MCP polls server until token is available
  */
-export async function handleLogin(apiUrl) {
+async function handleLogin(apiUrl) {
     let baseUrl = apiUrl || process.env.ANCHOR_API_URL || 'https://anchorscape.com';
     // Validate apiUrl against the same allowlist used by getBaseUrl()
     try {
@@ -377,7 +517,7 @@ export async function handleLogin(apiUrl) {
     const { sessionId } = await sessionRes.json();
     const authUrl = `${baseUrl}/cli/auth?session=${sessionId}`;
     // Try to open browser (WSL/macOS/Linux/Windows)
-    import('child_process').then(({ execFile }) => {
+    Promise.resolve().then(() => __importStar(require('child_process'))).then(({ execFile }) => {
         const isWSL = (() => {
             try {
                 return fs.readFileSync('/proc/version', 'utf-8').toLowerCase().includes('microsoft');
@@ -406,8 +546,8 @@ export async function handleLogin(apiUrl) {
     console.error(`\x1b[34m[auth]\x1b[0m Opening browser for login...`);
     console.error(`\x1b[34m[auth]\x1b[0m URL: ${authUrl}`);
     // Poll for completion
-    const maxWait = 120_000; // 2 minutes
-    const pollInterval = 2_000; // 2 seconds
+    const maxWait = 120000; // 2 minutes
+    const pollInterval = 2000; // 2 seconds
     const startTime = Date.now();
     while (Date.now() - startTime < maxWait) {
         await new Promise(r => setTimeout(r, pollInterval));
@@ -454,7 +594,7 @@ export async function handleLogin(apiUrl) {
 /**
  * Check deployment status
  */
-export async function handleStatus(projectName, environmentId) {
+async function handleStatus(projectName, environmentId) {
     requireAuth();
     // If specific environment given
     if (environmentId) {
@@ -462,36 +602,32 @@ export async function handleStatus(projectName, environmentId) {
         const env = data.environment;
         return formatEnvironmentStatus(env);
     }
-    // List all projects
-    const data = await apiJSON('GET', '/api/k3s/projects');
-    const projects = data.projects || [];
-    if (projects.length === 0) {
-        return 'No projects found. Use anchorscape_deploy to deploy your first project.';
+    // List user's environments
+    const data = await apiJSON('GET', '/api/k3s/environments');
+    const environments = data.environments || [];
+    if (environments.length === 0) {
+        return 'No deployments found. Use anchorscape_deploy to deploy your first project.';
     }
     // Filter by project name if given
     const filtered = projectName
-        ? projects.filter((p) => p.name === projectName || p.displayName === projectName)
-        : projects;
+        ? environments.filter((e) => e.displayName === projectName || e.name === projectName)
+        : environments;
     if (filtered.length === 0) {
-        return `No project named "${projectName}" found. Available projects: ${projects.map((p) => p.name).join(', ')}`;
+        const names = environments.map((e) => e.displayName || e.name);
+        return `No environment named "${projectName}" found. Available: ${names.join(', ')}`;
     }
     const lines = ['# Anchorscape Deployments', ''];
-    for (const project of filtered) {
-        lines.push(`## ${project.displayName || project.name}`);
-        const environments = project.environments || [];
-        if (environments.length === 0) {
-            lines.push('  No environments');
-        }
-        else {
-            for (const env of environments) {
-                const status = env.activeDeploymentId ? 'LIVE' : 'IDLE';
-                const url = env.customDomain
-                    ? `https://${env.customDomain}`
-                    : `https://${env.subdomain}.anchorscape.com`;
-                lines.push(`  **${env.name}** — ${url} — ${status}`);
-                lines.push(`    Environment ID: ${env.id}`);
-            }
-        }
+    for (const env of filtered) {
+        const status = env.activeDeploymentId ? 'LIVE' : 'IDLE';
+        const url = env.customDomain
+            ? `https://${env.customDomain}`
+            : env.subdomain
+                ? `https://${env.subdomain}.anchorscape.com`
+                : 'No URL yet';
+        lines.push(`## ${env.displayName || env.name}`);
+        lines.push(`  **URL:** ${url}`);
+        lines.push(`  **Status:** ${status}`);
+        lines.push(`  **Environment ID:** ${env.id}`);
         lines.push('');
     }
     lines.push('Use anchorscape_logs with an environment ID to view logs.');
@@ -519,7 +655,7 @@ function formatEnvironmentStatus(env) {
 /**
  * Get logs for a deployment
  */
-export async function handleLogs(environmentId, lines = 50) {
+async function handleLogs(environmentId, lines = 50) {
     requireAuth();
     // Clamp lines to prevent abuse
     const clampedLines = Math.max(1, Math.min(lines, 500));
@@ -539,7 +675,6 @@ export async function handleLogs(environmentId, lines = 50) {
 /**
  * List all projects
  */
-export async function handleProjects() {
+async function handleProjects() {
     return handleStatus();
 }
-//# sourceMappingURL=handlers.js.map

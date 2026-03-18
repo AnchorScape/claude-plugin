@@ -4,9 +4,6 @@
  * Handles deploy, auth, status, logs, and project listing.
  * Reuses patterns from the CLI (cli/src/) but adapted for MCP context.
  */
-/**
- * Deploy a project directory
- */
 export declare function handleDeploy(directory: string, environment?: 'development' | 'staging' | 'production', projectName?: string): Promise<string>;
 /**
  * Login via browser OAuth (polling-based — works in WSL2, SSH, Docker, etc.)
@@ -30,4 +27,3 @@ export declare function handleLogs(environmentId: string, lines?: number): Promi
  * List all projects
  */
 export declare function handleProjects(): Promise<string>;
-//# sourceMappingURL=handlers.d.ts.map
