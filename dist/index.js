@@ -179,7 +179,24 @@ async function main() {
                     if (!directory || typeof directory !== 'string') {
                         throw new types_js_1.McpError(types_js_1.ErrorCode.InvalidParams, 'directory is required');
                     }
-                    result = await (0, handlers_js_1.handleDeploy)(directory, environment, projectName);
+                    // Extract progress token for MCP progress notifications (if supported by client)
+                    const progressToken = request.params._meta?.progressToken;
+                    let progressCounter = 0;
+                    const onProgress = progressToken !== undefined
+                        ? (message) => {
+                            progressCounter++;
+                            server.notification({
+                                method: 'notifications/progress',
+                                params: {
+                                    progressToken,
+                                    progress: progressCounter,
+                                    total: 20, // Approximate total steps
+                                    message,
+                                },
+                            }).catch(() => { }); // Best-effort, don't break deploy on notification failure
+                        }
+                        : undefined;
+                    result = await (0, handlers_js_1.handleDeploy)(directory, environment, projectName, onProgress);
                     break;
                 }
                 case 'anchorscape_login': {

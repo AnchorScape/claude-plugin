@@ -204,7 +204,24 @@ async function main() {
           if (!directory || typeof directory !== 'string') {
             throw new McpError(ErrorCode.InvalidParams, 'directory is required');
           }
-          result = await handleDeploy(directory, environment, projectName);
+          // Extract progress token for MCP progress notifications (if supported by client)
+          const progressToken = request.params._meta?.progressToken;
+          let progressCounter = 0;
+          const onProgress = progressToken !== undefined
+            ? (message: string) => {
+                progressCounter++;
+                server.notification({
+                  method: 'notifications/progress',
+                  params: {
+                    progressToken,
+                    progress: progressCounter,
+                    total: 20, // Approximate total steps
+                    message,
+                  },
+                }).catch(() => {}); // Best-effort, don't break deploy on notification failure
+              }
+            : undefined;
+          result = await handleDeploy(directory, environment, projectName, onProgress);
           break;
         }
 

@@ -4,7 +4,7 @@
  * Handles deploy, auth, status, logs, and project listing.
  * Reuses patterns from the CLI (cli/src/) but adapted for MCP context.
  */
-export declare function handleDeploy(directory: string, environment?: 'development' | 'staging' | 'production', projectName?: string): Promise<string>;
+export declare function handleDeploy(directory: string, environment?: 'development' | 'staging' | 'production', projectName?: string, onProgress?: (message: string) => void): Promise<string>;
 /**
  * Login via browser OAuth (polling-based — works in WSL2, SSH, Docker, etc.)
  *

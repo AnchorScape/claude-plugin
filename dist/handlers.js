@@ -281,7 +281,7 @@ function saveAnchorState(directory, state) {
     }
     catch { /* best effort */ }
 }
-async function handleDeploy(directory, environment = 'development', projectName) {
+async function handleDeploy(directory, environment = 'development', projectName, onProgress) {
     // Validate directory
     if (!fs.existsSync(directory) || !fs.statSync(directory).isDirectory()) {
         throw new Error(`Directory not found: ${directory}`);
@@ -389,24 +389,42 @@ async function handleDeploy(directory, environment = 'development', projectName)
     let finalStatus = 'unknown';
     let finalUrl = '';
     let errorMessage = '';
+    let buildLogs = '';
     let lastLoggedStatus = '';
+    let lastLoggedStep = '';
+    const progressLog = [];
     while (Date.now() - startTime < maxWait) {
         await new Promise(r => setTimeout(r, pollInterval));
         try {
             const statusRes = await apiJSON('GET', `/api/k3s/deployments/${deploymentId}`);
             const dep = statusRes.deployment;
-            // Log status changes so the user sees progress
+            const elapsed = Math.round((Date.now() - startTime) / 1000);
+            // Log status changes
             if (dep.status !== lastLoggedStatus) {
                 lastLoggedStatus = dep.status;
-                const elapsed = Math.round((Date.now() - startTime) / 1000);
                 const statusLabels = {
                     queued: 'Queued...',
                     building: 'Building container image...',
+                    pushing: 'Pushing image to registry...',
                     deploying: 'Deploying to cluster...',
                     verifying: 'Verifying health checks...',
+                    troubleshooting: 'Anchorton analyzing failure...',
                 };
                 const label = statusLabels[dep.status] || dep.status;
-                console.error(`\x1b[34m[deploy]\x1b[0m ${label} (${elapsed}s)`);
+                const msg = `[deploy] ${label} (${elapsed}s)`;
+                console.error(`\x1b[34m${msg}\x1b[0m`);
+                progressLog.push(`${elapsed}s: ${label}`);
+                if (onProgress)
+                    onProgress(msg);
+            }
+            // Log currentStep changes (granular progress within a status)
+            if (dep.currentStep && dep.currentStep !== lastLoggedStep) {
+                lastLoggedStep = dep.currentStep;
+                const msg = `[deploy] > ${dep.currentStep} (${elapsed}s)`;
+                console.error(`\x1b[36m${msg}\x1b[0m`);
+                progressLog.push(`  ${elapsed}s: ${dep.currentStep}`);
+                if (onProgress)
+                    onProgress(dep.currentStep);
             }
             if (dep.status === 'completed') {
                 finalStatus = 'completed';
@@ -416,6 +434,7 @@ async function handleDeploy(directory, environment = 'development', projectName)
             if (dep.status === 'failed') {
                 finalStatus = 'failed';
                 errorMessage = dep.errorMessage || 'Unknown error';
+                buildLogs = dep.buildLogs || '';
                 break;
             }
             // Still building/deploying — continue polling
@@ -440,6 +459,7 @@ async function handleDeploy(directory, environment = 'development', projectName)
         console.error(`\x1b[31m[deploy]\x1b[0m Failed: ${errorMessage}`);
     }
     if (finalStatus === 'completed') {
+        const elapsed = Math.round((Date.now() - startTime) / 1000);
         const lines = [
             '# Deployed Successfully!',
             '',
@@ -447,6 +467,7 @@ async function handleDeploy(directory, environment = 'development', projectName)
             `**Environment:** ${environment}`,
             `**Project:** ${projectName}`,
             `**Files:** ${fileCount} (${sizeMB} MB)`,
+            `**Build time:** ${elapsed}s`,
             '',
             '## Add to your README',
             '```markdown',
@@ -458,7 +479,53 @@ async function handleDeploy(directory, environment = 'development', projectName)
         return lines.join('\n');
     }
     else if (finalStatus === 'failed') {
-        throw new Error(`Deployment failed: ${errorMessage}`);
+        // Build a rich error message with timeline and build logs
+        const errorLines = [
+            '# Deployment Failed',
+            '',
+            `**Error:** ${errorMessage}`,
+            '',
+        ];
+        if (progressLog.length > 0) {
+            errorLines.push('## Deploy Timeline');
+            for (const entry of progressLog) {
+                errorLines.push(`  ${entry}`);
+            }
+            errorLines.push('');
+        }
+        if (buildLogs) {
+            const logLines = buildLogs.split('\n').filter(l => l.trim());
+            const lastLines = logLines.slice(-30);
+            errorLines.push('## Build Logs (last 30 lines)');
+            errorLines.push('```');
+            errorLines.push(...lastLines);
+            errorLines.push('```');
+            errorLines.push('');
+            // Suggest fix based on common error patterns
+            const logsText = buildLogs.toLowerCase();
+            if (logsText.includes('npm install') || logsText.includes('npm ci') || logsText.includes('package-lock.json')) {
+                errorLines.push('**Suggestion:** Dependency installation failed. Check your package.json for invalid versions or missing packages.');
+            }
+            else if (logsText.includes('dockerfile') || logsText.includes('copy failed') || logsText.includes('no such file')) {
+                errorLines.push('**Suggestion:** A file referenced in the Dockerfile was not found. Check that all required files are included in the project (not in .gitignore).');
+            }
+            else if (logsText.includes('syntax error') || logsText.includes('syntaxerror') || logsText.includes('unexpected token')) {
+                errorLines.push('**Suggestion:** Build failed due to a syntax error. Check the logs above for the file and line number.');
+            }
+            else if (logsText.includes('out of memory') || logsText.includes('exit code 137')) {
+                errorLines.push('**Suggestion:** Build ran out of memory. Try reducing build parallelism (e.g., NODE_OPTIONS=--max-old-space-size=512).');
+            }
+            else if (logsText.includes('permission denied') || logsText.includes('eacces')) {
+                errorLines.push('**Suggestion:** Permission error during build. Check file permissions or avoid writing to read-only paths.');
+            }
+            else {
+                errorLines.push('**Suggestion:** Review the build logs above for the root cause. Common fixes: ensure all dependencies are in package.json, all referenced files exist, and the start command is correct.');
+            }
+        }
+        else {
+            errorLines.push('**Suggestion:** No build logs captured. The build may have failed before starting (e.g., ZIP upload issue, malware scan, or Kubernetes job creation failure).');
+        }
+        throw new Error(errorLines.join('\n'));
     }
     else {
         return [
