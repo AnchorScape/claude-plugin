@@ -2,7 +2,7 @@
   "mcpServers": {
     "anchorscape": {
       "command": "node",
-      "args": ["./dist/bundle.js"],
+      "args": ["./dist/bundle.cjs"],
       "env": {
         "ANCHOR_API_URL": "https://anchorscape.com"
       }
