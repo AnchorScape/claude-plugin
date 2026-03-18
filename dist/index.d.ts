@@ -18,3 +18,4 @@
  *   OR: node dist/mcp/index.js
  */
 export {};
+//# sourceMappingURL=index.d.ts.map

@@ -259,8 +259,8 @@ export async function handleDeploy(directory, environment = 'development', proje
         formData.append('environmentId', environmentId);
     }
     else {
-        formData.append('projectName', projectName);
-        formData.append('environmentName', environment);
+        formData.append('autoCreateEnvironment', 'true');
+        formData.append('displayName', projectName);
     }
     const uploadRes = await apiRequest('POST', '/api/k3s/deploy/upload', {
         body: formData,
@@ -542,3 +542,4 @@ export async function handleLogs(environmentId, lines = 50) {
 export async function handleProjects() {
     return handleStatus();
 }
+//# sourceMappingURL=handlers.js.map

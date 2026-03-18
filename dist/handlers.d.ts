@@ -30,3 +30,4 @@ export declare function handleLogs(environmentId: string, lines?: number): Promi
  * List all projects
  */
 export declare function handleProjects(): Promise<string>;
+//# sourceMappingURL=handlers.d.ts.map

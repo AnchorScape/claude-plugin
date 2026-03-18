@@ -255,6 +255,54 @@ async function zipDirectory(dir: string): Promise<{ buffer: Buffer; fileCount: n
 /**
  * Deploy a project directory
  */
+// ============================================================================
+// LOCAL PROJECT STATE (.anchorscape/project.json)
+// ============================================================================
+// Like Vercel's .vercel/project.json or Netlify's .netlify/state.json.
+// Maps this local directory to a specific Anchorscape environment, so:
+//   - 2nd deploy of same project → reuses the same environment
+//   - 2nd project in a different directory → creates a new environment
+//   - Each Claude window / directory is unambiguously linked
+
+interface AnchorState {
+  environmentId: string;
+  projectName: string;
+  environmentName: string;
+  url?: string;
+  createdAt: string;
+}
+
+function loadAnchorState(directory: string): AnchorState | null {
+  try {
+    const statePath = path.join(directory, '.anchorscape', 'project.json');
+    const data = fs.readFileSync(statePath, 'utf-8');
+    return JSON.parse(data) as AnchorState;
+  } catch {
+    return null;
+  }
+}
+
+function saveAnchorState(directory: string, state: AnchorState): void {
+  const stateDir = path.join(directory, '.anchorscape');
+  fs.mkdirSync(stateDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(stateDir, 'project.json'),
+    JSON.stringify(state, null, 2)
+  );
+
+  // Auto-add .anchorscape to .gitignore if not already there
+  const gitignorePath = path.join(directory, '.gitignore');
+  try {
+    const existing = fs.existsSync(gitignorePath)
+      ? fs.readFileSync(gitignorePath, 'utf-8')
+      : '';
+    if (!existing.includes('.anchorscape')) {
+      const newline = existing.endsWith('\n') || existing === '' ? '' : '\n';
+      fs.appendFileSync(gitignorePath, `${newline}.anchorscape/\n`);
+    }
+  } catch { /* best effort */ }
+}
+
 export async function handleDeploy(
   directory: string,
   environment: 'development' | 'staging' | 'production' = 'development',
@@ -294,20 +342,34 @@ export async function handleDeploy(
     throw new Error(`Project is too large (${sizeMB} MB, max 100 MB). Add large files to .gitignore or .anchorignore.`);
   }
 
-  // Check if project/environment already exists
+  // --- Resolve environment ID ---
+  // Priority: 1) local .anchorscape/project.json  2) API lookup by name  3) auto-create
   let environmentId: string | null = null;
-  try {
-    const projects = await apiJSON('GET', '/api/k3s/projects');
-    const existingProject = projects.projects?.find((p: any) =>
-      p.name === projectName || p.displayName === projectName
-    );
-    if (existingProject) {
-      const env = existingProject.environments?.find((e: any) => e.name === environment);
-      if (env) {
-        environmentId = env.id;
-      }
+
+  // 1) Check local anchor state (fastest, unambiguous)
+  const anchorState = loadAnchorState(directory);
+  if (anchorState?.environmentId) {
+    // Verify it still exists on the server
+    try {
+      await apiJSON('GET', `/api/k3s/environments/${anchorState.environmentId}`);
+      environmentId = anchorState.environmentId;
+    } catch {
+      // Environment was deleted — clear stale state, will auto-create below
     }
-  } catch { /* first deploy, no existing project */ }
+  }
+
+  // 2) Fallback: search user's environments by displayName
+  if (!environmentId) {
+    try {
+      const data = await apiJSON('GET', '/api/k3s/environments');
+      const envs = data.environments || [];
+      // Match by displayName (set during auto-create) — scoped to this user's JWT
+      const match = envs.find((e: any) => e.displayName === projectName);
+      if (match) {
+        environmentId = match.id;
+      }
+    } catch { /* first deploy, no existing environments */ }
+  }
 
   // Upload
   const formData = new FormData();
@@ -316,8 +378,9 @@ export async function handleDeploy(
   if (environmentId) {
     formData.append('environmentId', environmentId);
   } else {
-    formData.append('projectName', projectName);
-    formData.append('environmentName', environment);
+    // 3) No existing environment — auto-create
+    formData.append('autoCreateEnvironment', 'true');
+    formData.append('displayName', projectName);
   }
 
   const uploadRes = await apiRequest('POST', '/api/k3s/deploy/upload', {
@@ -335,6 +398,17 @@ export async function handleDeploy(
     streamUrl?: string;
     environmentId?: string;
   };
+
+  // Save environment ID locally for future deploys
+  const resolvedEnvId = deployData.environmentId || environmentId;
+  if (resolvedEnvId) {
+    saveAnchorState(directory, {
+      environmentId: resolvedEnvId,
+      projectName: projectName!,
+      environmentName: environment,
+      createdAt: anchorState?.createdAt || new Date().toISOString(),
+    });
+  }
 
   // Wait for deployment to complete (poll instead of SSE for MCP compatibility)
   const deploymentId = deployData.deploymentId;
@@ -369,6 +443,17 @@ export async function handleDeploy(
     } catch {
       // Network hiccup, keep polling
     }
+  }
+
+  // Update local state with URL
+  if (finalStatus === 'completed' && resolvedEnvId) {
+    saveAnchorState(directory, {
+      environmentId: resolvedEnvId,
+      projectName: projectName!,
+      environmentName: environment,
+      url: finalUrl,
+      createdAt: anchorState?.createdAt || new Date().toISOString(),
+    });
   }
 
   if (finalStatus === 'completed') {
@@ -559,41 +644,37 @@ export async function handleStatus(
     return formatEnvironmentStatus(env);
   }
 
-  // List all projects
-  const data = await apiJSON('GET', '/api/k3s/projects');
-  const projects = data.projects || [];
+  // List user's environments
+  const data = await apiJSON('GET', '/api/k3s/environments');
+  const environments = data.environments || [];
 
-  if (projects.length === 0) {
-    return 'No projects found. Use anchorscape_deploy to deploy your first project.';
+  if (environments.length === 0) {
+    return 'No deployments found. Use anchorscape_deploy to deploy your first project.';
   }
 
   // Filter by project name if given
   const filtered = projectName
-    ? projects.filter((p: any) => p.name === projectName || p.displayName === projectName)
-    : projects;
+    ? environments.filter((e: any) => e.displayName === projectName || e.name === projectName)
+    : environments;
 
   if (filtered.length === 0) {
-    return `No project named "${projectName}" found. Available projects: ${projects.map((p: any) => p.name).join(', ')}`;
+    const names = environments.map((e: any) => e.displayName || e.name);
+    return `No environment named "${projectName}" found. Available: ${names.join(', ')}`;
   }
 
   const lines: string[] = ['# Anchorscape Deployments', ''];
 
-  for (const project of filtered) {
-    lines.push(`## ${project.displayName || project.name}`);
-
-    const environments = project.environments || [];
-    if (environments.length === 0) {
-      lines.push('  No environments');
-    } else {
-      for (const env of environments) {
-        const status = env.activeDeploymentId ? 'LIVE' : 'IDLE';
-        const url = env.customDomain
-          ? `https://${env.customDomain}`
-          : `https://${env.subdomain}.anchorscape.com`;
-        lines.push(`  **${env.name}** — ${url} — ${status}`);
-        lines.push(`    Environment ID: ${env.id}`);
-      }
-    }
+  for (const env of filtered) {
+    const status = env.activeDeploymentId ? 'LIVE' : 'IDLE';
+    const url = env.customDomain
+      ? `https://${env.customDomain}`
+      : env.subdomain
+        ? `https://${env.subdomain}.anchorscape.com`
+        : 'No URL yet';
+    lines.push(`## ${env.displayName || env.name}`);
+    lines.push(`  **URL:** ${url}`);
+    lines.push(`  **Status:** ${status}`);
+    lines.push(`  **Environment ID:** ${env.id}`);
     lines.push('');
   }
 
