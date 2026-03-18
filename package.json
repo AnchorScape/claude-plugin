@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "description": "Scan, fix, and deploy your code from Claude Code",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/bundle.js",
   "bin": {
-    "anchorscape-mcp": "dist/index.js"
+    "anchorscape-mcp": "dist/bundle.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/bundle.js --external:archiver",
+    "build:tsc": "tsc",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -33,6 +34,7 @@
   "devDependencies": {
     "@types/archiver": "^6.0.3",
     "@types/node": "^20.0.0",
+    "esbuild": "^0.27.0",
     "typescript": "^5.5.0"
   },
   "files": [
