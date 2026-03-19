@@ -46989,37 +46989,52 @@ Returns the live URL with automatic SSL.
 
 Requires authentication \u2014 use anchorscape_login first if not logged in.
 
-IMPORTANT \u2014 Environment & workflow context for the AI agent:
+IMPORTANT \u2014 Read this before deploying. This applies to ANY project type (websites, APIs, full-stack
+apps, microservices, static sites, scripts \u2014 anything).
 
-1. ALWAYS default to "development" environment. Confirm the environment with the user before deploying.
-   Only use "staging" or "production" if the user explicitly requests it.
+== THE TWO RULES ==
 
-2. Anchorscape is a FULLY MANAGED platform. It handles everything automatically:
-   - Container builds (auto-generates Dockerfile if none exists)
-   - Database provisioning (PostgreSQL, MySQL, etc. \u2014 detected from project dependencies)
-   - SSL certificates (Let's Encrypt, automatic)
-   - DNS (auto-generated subdomain like your-app.anchorscape.com)
-   - Networking, ingress, health checks \u2014 all automatic
+RULE 1: "If it builds locally, Anchorscape handles the rest."
+   Anchorscape is a fully managed platform. It figures out your project and deploys it. You do NOT
+   need to create Dockerfiles, configure databases, set up SSL, write nginx configs, provision DNS,
+   inject environment variables, or run migrations manually. The platform does ALL of this automatically.
+   Do NOT hack, patch, stub, or modify the user's project to make it work on Anchorscape. If you find
+   yourself writing workarounds for platform behavior \u2014 STOP. You are doing it wrong. Trust the platform.
 
-3. Database & migration behavior:
-   - Anchorscape auto-detects ORMs (Prisma, Drizzle, TypeORM, Sequelize, Django, etc.)
-   - It automatically runs migrations as init jobs before the app starts
-   - On FIRST deploys, migration jobs may fail because the database is being provisioned simultaneously.
-     This is EXPECTED and NOT a bug. The platform retries and it resolves itself.
-   - Do NOT try to "fix" migration failures on first deploy by modifying the project (e.g., stubbing
-     the prisma CLI, removing migration files, etc.). Just redeploy or wait.
-   - If migrations keep failing after 2+ deploys, THEN investigate (wrong DATABASE_URL, bad schema, etc.)
+RULE 2: "If it doesn't build locally, it won't build on Anchorscape."
+   Anchorscape is not magic. If the project has broken imports, missing dependencies, syntax errors, or
+   a build script that fails \u2014 that is a CODE problem, not a platform problem. Fix the code first, verify
+   it builds/runs locally, THEN deploy. Do not deploy broken code and blame the platform.
 
-4. Prisma-specific notes:
-   - prisma.config.ts must be at the project root (not inside prisma/) for the migration runner to find it
-   - prisma generate runs at build time; migrations run as a separate init job at deploy time
-   - The platform injects DATABASE_URL automatically \u2014 projects should NOT hardcode connection strings
+== ENVIRONMENT ==
 
-5. First deploy creates the environment and all resources. Subsequent deploys to the same project
-   reuse the existing environment (tracked via .anchorscape/project.json).
+- ALWAYS default to "development". Confirm with the user before deploying.
+- Only use "staging" or "production" if the user explicitly asks.
+- First deploy creates the environment. Subsequent deploys reuse it (tracked via .anchorscape/project.json).
 
-6. Do NOT modify the user's Dockerfile, docker-compose, or project config to work around platform
-   behavior. If something fails, check logs with anchorscape_logs first.`,
+== WHAT THE PLATFORM HANDLES AUTOMATICALLY ==
+
+- Dockerfile generation (if none exists \u2014 detects framework, language, build tool)
+- Database provisioning (PostgreSQL, MySQL \u2014 detected from project dependencies/ORMs)
+- ORM migrations (Prisma, Drizzle, TypeORM, Sequelize, Django, Rails, etc.) as init jobs
+- SSL certificates (Let's Encrypt)
+- DNS (auto-generated subdomain: your-app.anchorscape.com)
+- Environment variables (DATABASE_URL, PORT, etc. \u2014 auto-injected)
+- Networking, ingress, health checks, restarts
+
+== FIRST DEPLOY BEHAVIOR ==
+
+On first deploys, the database and app are provisioned simultaneously. Migration init jobs may fail
+on the first attempt because the database isn't ready yet. This is NORMAL and EXPECTED \u2014 not a bug.
+The platform retries automatically. Do NOT "fix" this by stubbing binaries, removing migration files,
+or modifying the project. If migrations still fail after a second deploy, THEN check logs.
+
+== WHEN THINGS FAIL ==
+
+1. Check logs with anchorscape_logs \u2014 read the actual error
+2. If it's a build error (missing module, syntax error, type error) \u2014 that's a code problem, fix it
+3. If it's a platform error (migration race, health check timeout) \u2014 redeploy, it usually resolves
+4. NEVER modify Dockerfiles, docker-compose, or project config to work around platform behavior`,
     inputSchema: {
       type: "object",
       properties: {
