@@ -46,7 +46,39 @@ const TOOLS = [
 Zips the project (respecting .gitignore), uploads it, builds a container, and deploys to Kubernetes.
 Returns the live URL with automatic SSL.
 
-Requires authentication — use anchorscape_login first if not logged in.`,
+Requires authentication — use anchorscape_login first if not logged in.
+
+IMPORTANT — Environment & workflow context for the AI agent:
+
+1. ALWAYS default to "development" environment. Confirm the environment with the user before deploying.
+   Only use "staging" or "production" if the user explicitly requests it.
+
+2. Anchorscape is a FULLY MANAGED platform. It handles everything automatically:
+   - Container builds (auto-generates Dockerfile if none exists)
+   - Database provisioning (PostgreSQL, MySQL, etc. — detected from project dependencies)
+   - SSL certificates (Let's Encrypt, automatic)
+   - DNS (auto-generated subdomain like your-app.anchorscape.com)
+   - Networking, ingress, health checks — all automatic
+
+3. Database & migration behavior:
+   - Anchorscape auto-detects ORMs (Prisma, Drizzle, TypeORM, Sequelize, Django, etc.)
+   - It automatically runs migrations as init jobs before the app starts
+   - On FIRST deploys, migration jobs may fail because the database is being provisioned simultaneously.
+     This is EXPECTED and NOT a bug. The platform retries and it resolves itself.
+   - Do NOT try to "fix" migration failures on first deploy by modifying the project (e.g., stubbing
+     the prisma CLI, removing migration files, etc.). Just redeploy or wait.
+   - If migrations keep failing after 2+ deploys, THEN investigate (wrong DATABASE_URL, bad schema, etc.)
+
+4. Prisma-specific notes:
+   - prisma.config.ts must be at the project root (not inside prisma/) for the migration runner to find it
+   - prisma generate runs at build time; migrations run as a separate init job at deploy time
+   - The platform injects DATABASE_URL automatically — projects should NOT hardcode connection strings
+
+5. First deploy creates the environment and all resources. Subsequent deploys to the same project
+   reuse the existing environment (tracked via .anchorscape/project.json).
+
+6. Do NOT modify the user's Dockerfile, docker-compose, or project config to work around platform
+   behavior. If something fails, check logs with anchorscape_logs first.`,
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -57,7 +89,7 @@ Requires authentication — use anchorscape_login first if not logged in.`,
         environment: {
           type: 'string',
           enum: ['development', 'staging', 'production'],
-          description: 'Target environment (default: development)',
+          description: 'Target environment. ALWAYS default to "development" and confirm with the user before deploying. Only use staging/production if explicitly requested.',
           default: 'development',
         },
         projectName: {

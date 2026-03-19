@@ -122,6 +122,39 @@ Display the deployment result:
 - **Upload too large**: Suggest adding files to `.gitignore` or `.anchorignore`
 - **Build failed**: Show error logs and suggest fixes
 - **No project detected**: Ask the user to specify the directory
+- **Migration failed on first deploy**: This is EXPECTED. See "Platform Behavior" below. Do NOT modify the project to work around it — just redeploy.
+
+## Platform Behavior — IMPORTANT
+
+Anchorscape is a **fully managed platform**. It handles everything automatically:
+
+- **Container builds**: Auto-generates Dockerfile if none exists. Detects framework (Next.js, Vite, Django, Flask, Rails, Go, etc.)
+- **Database provisioning**: Auto-detects ORMs (Prisma, Drizzle, TypeORM, Sequelize, Django ORM, etc.) and provisions PostgreSQL/MySQL automatically
+- **Migrations**: Auto-runs migration init jobs before the app starts
+- **SSL**: Let's Encrypt, fully automatic
+- **DNS**: Auto-generated subdomain (your-app.anchorscape.com)
+- **Networking, ingress, health checks**: All automatic
+
+### First Deploy Behavior
+
+On the **first deploy**, the database and environment are provisioned simultaneously. This means:
+- Migration jobs may fail because the database isn't ready yet — **this is expected and NOT a bug**
+- The platform handles retries automatically
+- Do NOT try to "fix" this by modifying the project (stubbing CLI binaries, removing migration files, etc.)
+- If migrations keep failing after 2+ deploys, THEN investigate (check logs with `/anchorscape:status`)
+
+### Prisma-Specific
+
+- `prisma.config.ts` must be at the **project root** (not inside `prisma/`) for the migration runner
+- `prisma generate` runs at build time; migrations run as a separate init job at deploy time
+- The platform injects `DATABASE_URL` automatically — projects should NOT hardcode connection strings
+
+### Do NOT Modify Project Config for the Platform
+
+Never modify the user's Dockerfile, docker-compose.yml, or project configuration to work around platform behavior. If something fails:
+1. Check logs with `anchorscape_logs`
+2. Redeploy (first-deploy issues usually resolve on retry)
+3. Only modify project code if the issue is genuinely in the project itself
 
 ## Notes
 
