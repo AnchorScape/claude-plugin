@@ -12,6 +12,65 @@ import * as crypto from 'crypto';
 import archiver from 'archiver';
 
 // ============================================================================
+// STDERR FORMATTING (Rich ANSI output visible during MCP tool execution)
+// ============================================================================
+
+const C = {
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  blue: '\x1b[34m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  red: '\x1b[31m',
+  cyan: '\x1b[36m',
+  magenta: '\x1b[35m',
+  white: '\x1b[37m',
+  bgBlue: '\x1b[44m',
+  bgGreen: '\x1b[42m',
+  bgRed: '\x1b[41m',
+  bgYellow: '\x1b[43m',
+};
+
+function banner(title: string): void {
+  console.error('');
+  console.error(`${C.cyan}╔═══════════════════════════════════════════╗${C.reset}`);
+  console.error(`${C.cyan}║${C.reset}   ${C.bold}${C.white}⚓  ANCHORSCAPE${C.reset}                          ${C.cyan}║${C.reset}`);
+  console.error(`${C.cyan}║${C.reset}      ${C.bold}${C.white}${title}${C.reset}${' '.repeat(Math.max(0, 37 - title.length))}${C.cyan}║${C.reset}`);
+  console.error(`${C.cyan}╚═══════════════════════════════════════════╝${C.reset}`);
+  console.error('');
+}
+
+function logStep(step: number, total: number, message: string): void {
+  console.error(`${C.blue}  [${step}/${total}]${C.reset} ${message}`);
+}
+
+function logStatus(icon: string, message: string): void {
+  console.error(`${C.blue}  ${icon}${C.reset}  ${message}`);
+}
+
+function logSuccess(message: string): void {
+  console.error(`${C.green}  ✓${C.reset}  ${message}`);
+}
+
+function logError(message: string): void {
+  console.error(`${C.red}  ✗${C.reset}  ${message}`);
+}
+
+function logWarn(message: string): void {
+  console.error(`${C.yellow}  ⚠${C.reset}  ${message}`);
+}
+
+function logProgress(label: string, detail?: string): void {
+  const detailStr = detail ? ` ${C.dim}${detail}${C.reset}` : '';
+  console.error(`${C.cyan}  ›${C.reset}  ${label}${detailStr}`);
+}
+
+function logDivider(): void {
+  console.error(`${C.dim}  ${'─'.repeat(43)}${C.reset}`);
+}
+
+// ============================================================================
 // CREDENTIALS
 // ============================================================================
 
@@ -76,13 +135,17 @@ function requireAuth(): Credentials {
 }
 
 // ============================================================================
-// HTTP CLIENT
+// HTTP CLIENT (with timeouts and proper error handling)
 // ============================================================================
+
+const FETCH_TIMEOUT = 15_000; // 15s per request
+const UPLOAD_TIMEOUT = 120_000; // 2min for uploads (large zips)
 
 async function apiRequest(method: string, urlPath: string, options?: {
   body?: unknown;
   headers?: Record<string, string>;
   noAuth?: boolean;
+  timeout?: number;
 }): Promise<Response> {
   const url = `${getBaseUrl()}${urlPath}`;
   const headers: Record<string, string> = { ...options?.headers };
@@ -96,12 +159,14 @@ async function apiRequest(method: string, urlPath: string, options?: {
     headers['Content-Type'] = 'application/json';
   }
 
+  const timeout = options?.timeout ?? FETCH_TIMEOUT;
   const res = await fetch(url, {
     method,
     headers,
     body: options?.body instanceof FormData
       ? options.body as any
       : options?.body ? JSON.stringify(options.body) : undefined,
+    signal: AbortSignal.timeout(timeout),
   });
 
   return res;
@@ -110,6 +175,7 @@ async function apiRequest(method: string, urlPath: string, options?: {
 async function apiJSON(method: string, urlPath: string, options?: {
   body?: unknown;
   headers?: Record<string, string>;
+  timeout?: number;
 }): Promise<any> {
   const res = await apiRequest(method, urlPath, options);
   if (!res.ok) {
@@ -260,17 +326,9 @@ async function zipDirectory(dir: string): Promise<{ buffer: Buffer; fileCount: n
 // HANDLERS
 // ============================================================================
 
-/**
- * Deploy a project directory
- */
 // ============================================================================
 // LOCAL PROJECT STATE (.anchorscape/project.json)
 // ============================================================================
-// Like Vercel's .vercel/project.json or Netlify's .netlify/state.json.
-// Maps this local directory to a specific Anchorscape environment, so:
-//   - 2nd deploy of same project → reuses the same environment
-//   - 2nd project in a different directory → creates a new environment
-//   - Each Claude window / directory is unambiguously linked
 
 interface AnchorState {
   environmentId: string;
@@ -311,19 +369,28 @@ function saveAnchorState(directory: string, state: AnchorState): void {
   } catch { /* best effort */ }
 }
 
+/**
+ * Deploy a project directory
+ */
 export async function handleDeploy(
   directory: string,
   environment: 'development' | 'staging' | 'production' = 'development',
   projectName?: string,
   onProgress?: (message: string) => void,
 ): Promise<string> {
+  const totalSteps = 6;
+
+  banner('D E P L O Y');
+
   // Validate directory
   if (!fs.existsSync(directory) || !fs.statSync(directory).isDirectory()) {
+    logError(`Directory not found: ${directory}`);
     throw new Error(`Directory not found: ${directory}`);
   }
 
   // Check auth
-  requireAuth();
+  const creds = requireAuth();
+  logSuccess(`Authenticated as ${creds.email}`);
 
   // Detect project name
   if (!projectName) {
@@ -343,33 +410,36 @@ export async function handleDeploy(
     .slice(0, 40);
   projectName = cleanName;
 
-  // ZIP the directory
-  console.error(`\x1b[34m[deploy]\x1b[0m Packaging ${projectName}...`);
+  // ── Step 1: Package ──
+  logStep(1, totalSteps, 'Packaging project...');
+  if (onProgress) onProgress('Packaging project...');
+
   const { buffer, fileCount } = await zipDirectory(directory);
   const sizeMB = (buffer.length / 1024 / 1024).toFixed(1);
-  console.error(`\x1b[34m[deploy]\x1b[0m Packaged ${fileCount} files (${sizeMB} MB)`);
+  logSuccess(`Packaged ${C.bold}${fileCount}${C.reset} files (${sizeMB} MB)`);
 
   if (buffer.length > 100 * 1024 * 1024) {
+    logError(`Project too large: ${sizeMB} MB (max 100 MB)`);
     throw new Error(`Project is too large (${sizeMB} MB, max 100 MB). Add large files to .gitignore or .anchorignore.`);
   }
 
-  // --- Resolve environment ID ---
-  // Priority: 1) local .anchorscape/project.json  2) API lookup by name  3) auto-create
+  // ── Step 2: Resolve Environment ──
+  logStep(2, totalSteps, 'Resolving environment...');
+  if (onProgress) onProgress('Resolving environment...');
+
   let environmentId: string | null = null;
   let isRedeployment = false;
 
   // 1) Check local anchor state (fastest, unambiguous)
   const anchorState = loadAnchorState(directory);
   if (anchorState?.environmentId) {
-    console.error(`\x1b[34m[deploy]\x1b[0m Found existing environment from .anchorscape/project.json`);
-    // Verify it still exists on the server
     try {
       await apiJSON('GET', `/api/k3s/environments/${anchorState.environmentId}`);
       environmentId = anchorState.environmentId;
       isRedeployment = true;
+      logSuccess(`Reusing environment from .anchorscape/project.json`);
     } catch {
-      console.error(`\x1b[33m[deploy]\x1b[0m Previous environment was deleted, creating new one`);
-      // Environment was deleted — clear stale state, will auto-create below
+      logWarn('Previous environment was deleted, creating new one');
     }
   }
 
@@ -378,40 +448,43 @@ export async function handleDeploy(
     try {
       const data = await apiJSON('GET', '/api/k3s/environments');
       const envs = data.environments || [];
-      // Match by displayName (set during auto-create) — scoped to this user's JWT
       const match = envs.find((e: any) => e.displayName === projectName);
       if (match) {
         environmentId = match.id;
         isRedeployment = true;
-        console.error(`\x1b[34m[deploy]\x1b[0m Found existing environment by name: ${projectName}`);
+        logSuccess(`Found existing environment: ${projectName}`);
       }
     } catch { /* first deploy, no existing environments */ }
   }
 
   if (!isRedeployment) {
-    console.error(`\x1b[34m[deploy]\x1b[0m First deploy — creating new environment`);
+    logProgress('First deploy', 'new environment will be created');
   }
 
-  // Upload
-  console.error(`\x1b[34m[deploy]\x1b[0m Uploading ${sizeMB} MB to Anchorscape...`);
+  // ── Step 3: Upload ──
+  logStep(3, totalSteps, `Uploading ${sizeMB} MB to Anchorscape...`);
+  if (onProgress) onProgress(`Uploading ${sizeMB} MB...`);
+
   const formData = new FormData();
   formData.append('file', new Blob([new Uint8Array(buffer)]), 'project.zip');
 
   if (environmentId) {
     formData.append('environmentId', environmentId);
   } else {
-    // 3) No existing environment — auto-create
     formData.append('autoCreateEnvironment', 'true');
     formData.append('displayName', projectName);
   }
 
   const uploadRes = await apiRequest('POST', '/api/k3s/deploy/upload', {
     body: formData,
+    timeout: UPLOAD_TIMEOUT, // 2 min for large uploads
   });
 
   if (!uploadRes.ok) {
     const data = await uploadRes.json().catch(() => ({}));
-    throw new Error(`Upload failed: ${(data as any).error || (data as any).message || `HTTP ${uploadRes.status}`}`);
+    const errMsg = (data as any).error || (data as any).message || `HTTP ${uploadRes.status}`;
+    logError(`Upload failed: ${errMsg}`);
+    throw new Error(`Upload failed: ${errMsg}`);
   }
 
   const deployData = await uploadRes.json() as {
@@ -421,7 +494,7 @@ export async function handleDeploy(
     environmentId?: string;
   };
 
-  console.error(`\x1b[32m[deploy]\x1b[0m Upload complete — build started`);
+  logSuccess('Upload complete — build queued');
 
   // Save environment ID locally for future deploys
   const resolvedEnvId = deployData.environmentId || environmentId;
@@ -434,11 +507,15 @@ export async function handleDeploy(
     });
   }
 
-  // Wait for deployment to complete (poll instead of SSE for MCP compatibility)
+  // ── Step 4-6: Build → Deploy → Verify (polling) ──
+  logStep(4, totalSteps, 'Building container image...');
+  if (onProgress) onProgress('Building container image...');
+
   const deploymentId = deployData.deploymentId;
   const maxWait = 300_000; // 5 minutes
-  const pollInterval = 5_000; // 5 seconds
+  const pollInterval = 2_000; // 2 seconds (was 5s — much more responsive now)
   const startTime = Date.now();
+  const maxConsecutiveErrors = 5; // abort after 5 consecutive network failures
 
   let finalStatus = 'unknown';
   let finalUrl = '';
@@ -446,40 +523,49 @@ export async function handleDeploy(
   let buildLogs = '';
   let lastLoggedStatus = '';
   let lastLoggedStep = '';
+  let consecutiveErrors = 0;
   const progressLog: string[] = [];
+
+  // Status → step mapping for numbered progress
+  const statusStepMap: Record<string, { step: number; label: string; icon: string }> = {
+    queued: { step: 4, label: 'Queued — waiting for build slot', icon: '⏳' },
+    building: { step: 4, label: 'Building container image', icon: '🔨' },
+    pushing: { step: 5, label: 'Pushing image to registry', icon: '📦' },
+    deploying: { step: 5, label: 'Deploying to cluster', icon: '🚀' },
+    verifying: { step: 6, label: 'Running health checks', icon: '🩺' },
+    troubleshooting: { step: 6, label: 'Anchorton analyzing failure', icon: '🔍' },
+  };
 
   while (Date.now() - startTime < maxWait) {
     await new Promise(r => setTimeout(r, pollInterval));
 
     try {
       const statusRes = await apiJSON('GET', `/api/k3s/deployments/${deploymentId}`);
+      consecutiveErrors = 0; // Reset on success
+
       const dep = statusRes.deployment;
       const elapsed = Math.round((Date.now() - startTime) / 1000);
 
-      // Log status changes
+      // Log status changes with rich formatting
       if (dep.status !== lastLoggedStatus) {
         lastLoggedStatus = dep.status;
-        const statusLabels: Record<string, string> = {
-          queued: 'Queued...',
-          building: 'Building container image...',
-          pushing: 'Pushing image to registry...',
-          deploying: 'Deploying to cluster...',
-          verifying: 'Verifying health checks...',
-          troubleshooting: 'Anchorton analyzing failure...',
-        };
-        const label = statusLabels[dep.status] || dep.status;
-        const msg = `[deploy] ${label} (${elapsed}s)`;
-        console.error(`\x1b[34m${msg}\x1b[0m`);
-        progressLog.push(`${elapsed}s: ${label}`);
-        if (onProgress) onProgress(msg);
+        const info = statusStepMap[dep.status];
+        if (info) {
+          logStep(info.step, totalSteps, `${info.label}...`);
+          progressLog.push(`${elapsed}s — ${info.label}`);
+          if (onProgress) onProgress(`[${info.step}/${totalSteps}] ${info.label}`);
+        } else {
+          logProgress(dep.status, `${elapsed}s`);
+          progressLog.push(`${elapsed}s — ${dep.status}`);
+          if (onProgress) onProgress(dep.status);
+        }
       }
 
       // Log currentStep changes (granular progress within a status)
       if (dep.currentStep && dep.currentStep !== lastLoggedStep) {
         lastLoggedStep = dep.currentStep;
-        const msg = `[deploy] > ${dep.currentStep} (${elapsed}s)`;
-        console.error(`\x1b[36m${msg}\x1b[0m`);
-        progressLog.push(`  ${elapsed}s: ${dep.currentStep}`);
+        logProgress(dep.currentStep, `${elapsed}s`);
+        progressLog.push(`  ${elapsed}s — ${dep.currentStep}`);
         if (onProgress) onProgress(dep.currentStep);
       }
 
@@ -497,30 +583,72 @@ export async function handleDeploy(
       }
 
       // Still building/deploying — continue polling
-    } catch {
-      // Network hiccup, keep polling
+    } catch (err: unknown) {
+      consecutiveErrors++;
+      const errMsg = err instanceof Error ? err.message : String(err);
+
+      // Distinguish transient network errors from real API errors
+      const isTimeout = errMsg.includes('TimeoutError') || errMsg.includes('aborted');
+      const isNetworkError = isTimeout || errMsg.includes('ECONNREFUSED') || errMsg.includes('ENOTFOUND') || errMsg.includes('fetch failed');
+
+      if (isNetworkError) {
+        logWarn(`Network issue (attempt ${consecutiveErrors}/${maxConsecutiveErrors}): ${isTimeout ? 'request timed out' : 'connection failed'}`);
+      } else {
+        // Real API error (auth failed, 404, 500, etc.) — fail fast
+        logError(`API error: ${errMsg}`);
+        finalStatus = 'failed';
+        errorMessage = errMsg;
+        break;
+      }
+
+      if (consecutiveErrors >= maxConsecutiveErrors) {
+        logError(`${maxConsecutiveErrors} consecutive network failures — aborting`);
+        finalStatus = 'failed';
+        errorMessage = `Lost connection to Anchorscape after ${maxConsecutiveErrors} retries. Check your network and try /anchorscape:status to see if the deployment completed.`;
+        break;
+      }
     }
   }
 
-  // Update local state with URL
-  if (finalStatus === 'completed' && resolvedEnvId) {
-    saveAnchorState(directory, {
-      environmentId: resolvedEnvId,
-      projectName: projectName!,
-      environmentName: environment,
-      url: finalUrl,
-      createdAt: anchorState?.createdAt || new Date().toISOString(),
-    });
-    const elapsed = Math.round((Date.now() - startTime) / 1000);
-    console.error(`\x1b[32m[deploy]\x1b[0m Live at ${finalUrl} (${elapsed}s)`);
-  } else if (finalStatus === 'failed') {
-    console.error(`\x1b[31m[deploy]\x1b[0m Failed: ${errorMessage}`);
-  }
+  const elapsed = Math.round((Date.now() - startTime) / 1000);
+
+  // ── Results ──
+  logDivider();
 
   if (finalStatus === 'completed') {
-    const elapsed = Math.round((Date.now() - startTime) / 1000);
-    const lines = [
-      '# Deployed Successfully!',
+    // Update local state with URL
+    if (resolvedEnvId) {
+      saveAnchorState(directory, {
+        environmentId: resolvedEnvId,
+        projectName: projectName!,
+        environmentName: environment,
+        url: finalUrl,
+        createdAt: anchorState?.createdAt || new Date().toISOString(),
+      });
+    }
+
+    // Rich success output to stderr
+    console.error('');
+    console.error(`${C.green}${C.bold}  ✓  DEPLOYED SUCCESSFULLY${C.reset}`);
+    console.error('');
+    console.error(`  ${C.bold}URL:${C.reset}          ${C.cyan}${finalUrl}${C.reset}`);
+    console.error(`  ${C.bold}Project:${C.reset}      ${projectName}`);
+    console.error(`  ${C.bold}Environment:${C.reset}  ${environment}`);
+    console.error(`  ${C.bold}Files:${C.reset}        ${fileCount} (${sizeMB} MB)`);
+    console.error(`  ${C.bold}Build time:${C.reset}   ${elapsed}s`);
+    console.error('');
+    logDivider();
+    console.error('');
+    console.error(`  ${C.dim}Next:${C.reset}`);
+    console.error(`    ${C.cyan}/anchorscape:status${C.reset}    Check deployment health`);
+    console.error(`    ${C.cyan}/anchorscape:dns${C.reset}       Set up custom domain`);
+    console.error(`    ${C.cyan}/anchorscape:dev${C.reset}       Iterative dev loop`);
+    console.error(`    ${C.cyan}/anchorscape:promote${C.reset}   Promote to staging/prod`);
+    console.error('');
+
+    // Tool result (what Claude sees)
+    return [
+      '# Deployed Successfully',
       '',
       `**URL:** ${finalUrl}`,
       `**Environment:** ${environment}`,
@@ -528,35 +656,68 @@ export async function handleDeploy(
       `**Files:** ${fileCount} (${sizeMB} MB)`,
       `**Build time:** ${elapsed}s`,
       '',
-      '## Add to your README',
+      '## Timeline',
+      ...progressLog.map(l => `- ${l}`),
+      '',
+      '## README Badge',
       '```markdown',
       `[![Deployed on Anchorscape](https://anchorscape.com/api/badge/${projectName}/status)](${finalUrl})`,
       '```',
       '',
       'Use `/anchorscape:status` to check deployment health.',
-    ];
-    return lines.join('\n');
+    ].join('\n');
   } else if (finalStatus === 'failed') {
-    // Build a rich error message with timeline and build logs
+    // Rich failure output to stderr
+    console.error('');
+    console.error(`${C.red}${C.bold}  ✗  DEPLOYMENT FAILED${C.reset}`);
+    console.error('');
+    console.error(`  ${C.bold}Error:${C.reset}   ${errorMessage}`);
+    console.error(`  ${C.bold}Elapsed:${C.reset} ${elapsed}s`);
+    console.error('');
+
+    if (progressLog.length > 0) {
+      console.error(`  ${C.bold}Timeline:${C.reset}`);
+      for (const entry of progressLog) {
+        console.error(`    ${C.dim}${entry}${C.reset}`);
+      }
+      console.error('');
+    }
+
+    if (buildLogs) {
+      const logLines = buildLogs.split('\n').filter((l: string) => l.trim());
+      const lastLines = logLines.slice(-20);
+      console.error(`  ${C.bold}Build logs (last ${lastLines.length} lines):${C.reset}`);
+      for (const line of lastLines) {
+        console.error(`    ${C.dim}${line}${C.reset}`);
+      }
+      console.error('');
+    }
+
+    logDivider();
+    console.error('');
+
+    // Tool result with full logs
     const errorLines: string[] = [
       '# Deployment Failed',
       '',
       `**Error:** ${errorMessage}`,
+      `**Elapsed:** ${elapsed}s`,
       '',
     ];
 
     if (progressLog.length > 0) {
       errorLines.push('## Deploy Timeline');
       for (const entry of progressLog) {
-        errorLines.push(`  ${entry}`);
+        errorLines.push(`- ${entry}`);
       }
       errorLines.push('');
     }
 
     if (buildLogs) {
-      const logLines = buildLogs.split('\n').filter(l => l.trim());
-      const lastLines = logLines.slice(-30);
-      errorLines.push('## Build Logs (last 30 lines)');
+      const logLines = buildLogs.split('\n').filter((l: string) => l.trim());
+      // Show up to 100 lines (was 30 — way too little)
+      const lastLines = logLines.slice(-100);
+      errorLines.push(`## Build Logs (last ${lastLines.length} lines)`);
       errorLines.push('```');
       errorLines.push(...lastLines);
       errorLines.push('```');
@@ -583,25 +744,60 @@ export async function handleDeploy(
 
     throw new Error(errorLines.join('\n'));
   } else {
-    return [
-      `Deployment started (ID: ${deploymentId})`,
-      `Project: ${projectName}`,
-      `Environment: ${environment}`,
-      `Files: ${fileCount} (${sizeMB} MB)`,
+    // Timeout — this is NOT a success. Be clear about it.
+    console.error('');
+    console.error(`${C.yellow}${C.bold}  ⚠  DEPLOYMENT TIMED OUT${C.reset}`);
+    console.error('');
+    console.error(`  ${C.bold}Status:${C.reset}   Build still running after ${elapsed}s`);
+    console.error(`  ${C.bold}Deploy ID:${C.reset} ${deploymentId}`);
+    console.error('');
+    console.error(`  The deployment may still complete. Check with:`);
+    console.error(`    ${C.cyan}/anchorscape:status${C.reset}`);
+    console.error('');
+    logDivider();
+    console.error('');
+
+    if (progressLog.length > 0) {
+      console.error(`  ${C.bold}Last known progress:${C.reset}`);
+      for (const entry of progressLog.slice(-5)) {
+        console.error(`    ${C.dim}${entry}${C.reset}`);
+      }
+      console.error('');
+    }
+
+    // Tool result — be honest that this timed out
+    const lines = [
+      '# Deployment Timed Out',
       '',
-      'Deployment is still in progress. Use anchorscape_status to check.',
-    ].join('\n');
+      `The deployment has been running for ${elapsed}s and hasn't completed yet.`,
+      `This does **not** mean it failed — large builds can take longer.`,
+      '',
+      `**Deployment ID:** ${deploymentId}`,
+      `**Project:** ${projectName}`,
+      `**Environment:** ${environment}`,
+      `**Last status:** ${lastLoggedStatus || 'unknown'}`,
+      '',
+    ];
+
+    if (progressLog.length > 0) {
+      lines.push('## Progress so far');
+      for (const entry of progressLog) {
+        lines.push(`- ${entry}`);
+      }
+      lines.push('');
+    }
+
+    lines.push('## What to do');
+    lines.push('- Run `/anchorscape:status` to check if deployment completed');
+    lines.push('- Run `anchorscape_logs` tool to view build output');
+    lines.push('- If stuck, try deploying again with `/anchorscape:deploy`');
+
+    return lines.join('\n');
   }
 }
 
 /**
  * Login via browser OAuth (polling-based — works in WSL2, SSH, Docker, etc.)
- *
- * Flow:
- * 1. Create a pending auth session on the server
- * 2. Open browser to auth page referencing that session
- * 3. User authorizes in browser → server stores token
- * 4. MCP polls server until token is available
  */
 export async function handleLogin(apiUrl?: string): Promise<string> {
   let baseUrl = apiUrl || process.env.ANCHOR_API_URL || 'https://anchorscape.com';
@@ -620,9 +816,12 @@ export async function handleLogin(apiUrl?: string): Promise<string> {
     baseUrl = 'https://anchorscape.com';
   }
 
+  banner('L O G I N');
+
   // Check if already logged in
   const existing = loadCredentials();
   if (existing && !isTokenExpired(existing)) {
+    logSuccess(`Already logged in as ${C.bold}${existing.email}${C.reset}`);
     return [
       `Already logged in as **${existing.email}**`,
       `API: ${existing.apiUrl}`,
@@ -632,12 +831,15 @@ export async function handleLogin(apiUrl?: string): Promise<string> {
   }
 
   // Create a pending auth session on the server
+  logStep(1, 3, 'Creating auth session...');
   const sessionRes = await fetch(`${baseUrl}/api/auth/cli/session`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT),
   });
 
   if (!sessionRes.ok) {
+    logError('Failed to create auth session');
     throw new Error('Failed to create auth session. Is the Anchorscape server reachable?');
   }
 
@@ -645,6 +847,7 @@ export async function handleLogin(apiUrl?: string): Promise<string> {
   const authUrl = `${baseUrl}/cli/auth?session=${sessionId}`;
 
   // Try to open browser (WSL/macOS/Linux/Windows)
+  logStep(2, 3, 'Opening browser...');
   import('child_process').then(({ execFile }) => {
     const isWSL = (() => {
       try {
@@ -669,10 +872,11 @@ export async function handleLogin(apiUrl?: string): Promise<string> {
     }
   }).catch(() => {});
 
-  console.error(`\x1b[34m[auth]\x1b[0m Opening browser for login...`);
-  console.error(`\x1b[34m[auth]\x1b[0m URL: ${authUrl}`);
+  console.error(`  ${C.bold}Auth URL:${C.reset} ${C.cyan}${authUrl}${C.reset}`);
+  console.error('');
 
   // Poll for completion
+  logStep(3, 3, 'Waiting for browser authorization...');
   const maxWait = 120_000; // 2 minutes
   const pollInterval = 2_000; // 2 seconds
   const startTime = Date.now();
@@ -682,7 +886,8 @@ export async function handleLogin(apiUrl?: string): Promise<string> {
 
     try {
       const statusRes = await fetch(
-        `${baseUrl}/api/auth/cli/session/${sessionId}/status`
+        `${baseUrl}/api/auth/cli/session/${sessionId}/status`,
+        { signal: AbortSignal.timeout(FETCH_TIMEOUT) }
       );
 
       if (!statusRes.ok) continue;
@@ -704,7 +909,7 @@ export async function handleLogin(apiUrl?: string): Promise<string> {
           apiUrl: baseUrl,
         });
 
-        console.error(`\x1b[32m[auth]\x1b[0m Logged in as ${data.email}`);
+        logSuccess(`Logged in as ${C.bold}${data.email}${C.reset}`);
 
         return [
           `Logged in as **${data.email}**`,
@@ -719,11 +924,12 @@ export async function handleLogin(apiUrl?: string): Promise<string> {
 
       // status === 'pending' — keep polling
     } catch {
-      // Network hiccup — keep polling
+      // Network hiccup — keep polling (login polling is inherently transient)
     }
   }
 
   // Timeout or expired
+  logWarn('Login was not completed in time');
   return [
     '**Login was not completed in time.**',
     '',
@@ -744,6 +950,8 @@ export async function handleStatus(
 ): Promise<string> {
   requireAuth();
 
+  banner('S T A T U S');
+
   // If specific environment given
   if (environmentId) {
     const data = await apiJSON('GET', `/api/k3s/environments/${environmentId}`);
@@ -756,6 +964,7 @@ export async function handleStatus(
   const environments = data.environments || [];
 
   if (environments.length === 0) {
+    logWarn('No deployments found');
     return 'No deployments found. Use anchorscape_deploy to deploy your first project.';
   }
 
@@ -769,6 +978,21 @@ export async function handleStatus(
     return `No environment named "${projectName}" found. Available: ${names.join(', ')}`;
   }
 
+  // Rich stderr output
+  for (const env of filtered) {
+    const status = env.activeDeploymentId ? 'LIVE' : 'IDLE';
+    const statusColor = status === 'LIVE' ? C.green : C.yellow;
+    const url = env.customDomain
+      ? `https://${env.customDomain}`
+      : env.subdomain
+        ? `https://${env.subdomain}.anchorscape.com`
+        : 'No URL yet';
+    console.error(`  ${C.bold}${env.displayName || env.name}${C.reset}  ${statusColor}${status}${C.reset}`);
+    console.error(`  ${C.dim}${url}${C.reset}`);
+    console.error('');
+  }
+
+  // Tool result
   const lines: string[] = ['# Anchorscape Deployments', ''];
 
   for (const env of filtered) {
@@ -794,11 +1018,20 @@ function formatEnvironmentStatus(env: any): string {
     ? `https://${env.customDomain}`
     : `https://${env.subdomain}.anchorscape.com`;
 
+  const status = env.activeDeploymentId ? 'LIVE' : 'IDLE';
+  const statusColor = status === 'LIVE' ? C.green : C.yellow;
+
+  // Rich stderr
+  console.error(`  ${C.bold}${env.displayName || env.name}${C.reset}  ${statusColor}${status}${C.reset}`);
+  console.error(`  ${C.cyan}${url}${C.reset}`);
+  console.error(`  ${C.dim}Tier: ${env.resourceTier} | Port: ${env.appPort} | Replicas: ${env.replicas}${C.reset}`);
+  console.error('');
+
   return [
     `## ${env.displayName || env.name}`,
     '',
     `**URL:** ${url}`,
-    `**Status:** ${env.activeDeploymentId ? 'LIVE' : 'IDLE'}`,
+    `**Status:** ${status}`,
     `**Tier:** ${env.resourceTier}`,
     `**Port:** ${env.appPort}`,
     `**Replicas:** ${env.replicas}`,
@@ -819,17 +1052,24 @@ export async function handleLogs(
 ): Promise<string> {
   requireAuth();
 
+  banner('L O G S');
+
   // Clamp lines to prevent abuse
   const clampedLines = Math.max(1, Math.min(lines, 500));
+
+  logStep(1, 1, `Fetching last ${clampedLines} lines...`);
 
   const data = await apiJSON('GET', `/api/k3s/environments/${environmentId}/logs?lines=${clampedLines}`);
 
   if (!data.logs || data.logs.length === 0) {
+    logWarn('No logs available');
     return 'No logs available for this environment.';
   }
 
+  logSuccess(`Retrieved ${data.logs.split('\n').length} log lines`);
+
   return [
-    `# Logs (last ${lines} lines)`,
+    `# Logs (last ${clampedLines} lines)`,
     `Environment: ${environmentId}`,
     '',
     '```',

@@ -19,15 +19,13 @@
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
   ErrorCode,
   McpError,
-  JSONRPCMessageSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
-import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js';
 import {
   handleDeploy,
   handleLogin,
@@ -35,141 +33,6 @@ import {
   handleLogs,
   handleProjects,
 } from './handlers.js';
-
-// ============================================================================
-// DUAL-MODE STDIO TRANSPORT
-// Auto-detects Content-Length framing vs newline-delimited JSON
-// ============================================================================
-
-class DualModeStdioTransport implements Transport {
-  private _stdin: NodeJS.ReadableStream;
-  private _stdout: NodeJS.WritableStream;
-  private _buffer = Buffer.alloc(0);
-  private _started = false;
-  private _mode: 'unknown' | 'content-length' | 'newline' = 'unknown';
-
-  onclose?: () => void;
-  onerror?: (error: Error) => void;
-  onmessage?: (message: JSONRPCMessage) => void;
-
-  constructor(stdin?: NodeJS.ReadableStream, stdout?: NodeJS.WritableStream) {
-    this._stdin = stdin ?? process.stdin;
-    this._stdout = stdout ?? process.stdout;
-  }
-
-  async start(): Promise<void> {
-    if (this._started) {
-      throw new Error('Transport already started');
-    }
-    this._started = true;
-
-    this._stdin.on('data', (chunk: Buffer) => {
-      this._buffer = Buffer.concat([this._buffer, chunk]);
-      this._processBuffer();
-    });
-
-    this._stdin.on('error', (error: Error) => {
-      this.onerror?.(error);
-    });
-  }
-
-  private _processBuffer(): void {
-    while (this._buffer.length > 0) {
-      // Auto-detect mode from first bytes
-      if (this._mode === 'unknown') {
-        const peek = this._buffer.toString('utf8', 0, Math.min(20, this._buffer.length));
-        if (peek.startsWith('Content-Length:')) {
-          this._mode = 'content-length';
-          console.error('[MCP] Detected Content-Length framing');
-        } else {
-          this._mode = 'newline';
-          console.error('[MCP] Detected newline-delimited framing');
-        }
-      }
-
-      if (this._mode === 'content-length') {
-        // Parse Content-Length: N\r\n\r\n{json}
-        const headerEnd = this._buffer.indexOf('\r\n\r\n');
-        if (headerEnd === -1) break; // Need more data
-
-        const header = this._buffer.toString('utf8', 0, headerEnd);
-        const match = header.match(/Content-Length:\s*(\d+)/);
-        if (!match) {
-          this.onerror?.(new Error(`Invalid header: ${header}`));
-          // Skip past the bad header
-          this._buffer = this._buffer.subarray(headerEnd + 4);
-          continue;
-        }
-
-        const contentLength = parseInt(match[1], 10);
-        const messageStart = headerEnd + 4;
-        if (this._buffer.length < messageStart + contentLength) break; // Need more data
-
-        const messageStr = this._buffer.toString('utf8', messageStart, messageStart + contentLength);
-        this._buffer = this._buffer.subarray(messageStart + contentLength);
-
-        try {
-          const message = JSONRPCMessageSchema.parse(JSON.parse(messageStr));
-          this.onmessage?.(message);
-        } catch (error) {
-          this.onerror?.(error instanceof Error ? error : new Error(String(error)));
-        }
-      } else {
-        // Newline-delimited: read until \n
-        const index = this._buffer.indexOf('\n');
-        if (index === -1) break; // Need more data
-
-        const line = this._buffer.toString('utf8', 0, index).replace(/\r$/, '');
-        this._buffer = this._buffer.subarray(index + 1);
-
-        if (!line.trim()) continue; // Skip empty lines
-
-        try {
-          const message = JSONRPCMessageSchema.parse(JSON.parse(line));
-          this.onmessage?.(message);
-        } catch (error) {
-          this.onerror?.(error instanceof Error ? error : new Error(String(error)));
-        }
-      }
-    }
-  }
-
-  send(message: JSONRPCMessage): Promise<void> {
-    return new Promise((resolve) => {
-      const json = JSON.stringify(message);
-
-      let output: string;
-      if (this._mode === 'content-length') {
-        // Respond in Content-Length format to match client
-        const byteLength = Buffer.byteLength(json, 'utf8');
-        output = `Content-Length: ${byteLength}\r\n\r\n${json}`;
-      } else {
-        // Newline-delimited
-        output = json + '\n';
-      }
-
-      if ((this._stdout as NodeJS.WriteStream).write(output)) {
-        resolve();
-      } else {
-        (this._stdout as NodeJS.WriteStream).once('drain', resolve);
-      }
-    });
-  }
-
-  async close(): Promise<void> {
-    this._stdin.removeAllListeners('data');
-    this._stdin.removeAllListeners('error');
-    if ('pause' in this._stdin && typeof (this._stdin as any).pause === 'function') {
-      (this._stdin as any).pause();
-    }
-    this._buffer = Buffer.alloc(0);
-    this.onclose?.();
-  }
-
-  get sessionId(): string | undefined {
-    return undefined;
-  }
-}
 
 // ============================================================================
 // TOOL DEFINITIONS
@@ -351,13 +214,14 @@ async function main() {
                   method: 'notifications/progress',
                   params: {
                     progressToken,
-                    progress: progressCounter,
-                    total: 20, // Approximate total steps
+                    progress: Math.min(progressCounter, 100),
+                    total: 100,
                     message,
                   },
                 }).catch(() => {}); // Best-effort, don't break deploy on notification failure
               }
-            : undefined;
+            : // Even without progress token, still pass onProgress so stderr output works
+              undefined;
           result = await handleDeploy(directory, environment, projectName, onProgress);
           break;
         }
@@ -408,8 +272,8 @@ async function main() {
     }
   });
 
-  // Start the server with dual-mode transport (Content-Length + newline-delimited)
-  const transport = new DualModeStdioTransport();
+  // Start the server
+  const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error('Anchorscape MCP server started');
 }

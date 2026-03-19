@@ -14394,7 +14394,7 @@ var require_abort_controller = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     var eventTargetShim = require_event_target_shim();
-    var AbortSignal = class extends eventTargetShim.EventTarget {
+    var AbortSignal2 = class extends eventTargetShim.EventTarget {
       /**
        * AbortSignal cannot be constructed directly.
        */
@@ -14413,9 +14413,9 @@ var require_abort_controller = __commonJS({
         return aborted2;
       }
     };
-    eventTargetShim.defineEventAttribute(AbortSignal.prototype, "abort");
+    eventTargetShim.defineEventAttribute(AbortSignal2.prototype, "abort");
     function createAbortSignal() {
-      const signal = Object.create(AbortSignal.prototype);
+      const signal = Object.create(AbortSignal2.prototype);
       eventTargetShim.EventTarget.call(signal);
       abortedFlags.set(signal, false);
       return signal;
@@ -14428,11 +14428,11 @@ var require_abort_controller = __commonJS({
       signal.dispatchEvent({ type: "abort" });
     }
     var abortedFlags = /* @__PURE__ */ new WeakMap();
-    Object.defineProperties(AbortSignal.prototype, {
+    Object.defineProperties(AbortSignal2.prototype, {
       aborted: { enumerable: true }
     });
     if (typeof Symbol === "function" && typeof Symbol.toStringTag === "symbol") {
-      Object.defineProperty(AbortSignal.prototype, Symbol.toStringTag, {
+      Object.defineProperty(AbortSignal2.prototype, Symbol.toStringTag, {
         configurable: true,
         value: "AbortSignal"
       });
@@ -14476,11 +14476,11 @@ var require_abort_controller = __commonJS({
       });
     }
     exports2.AbortController = AbortController2;
-    exports2.AbortSignal = AbortSignal;
+    exports2.AbortSignal = AbortSignal2;
     exports2.default = AbortController2;
     module2.exports = AbortController2;
     module2.exports.AbortController = module2.exports["default"] = AbortController2;
-    module2.exports.AbortSignal = AbortSignal;
+    module2.exports.AbortSignal = AbortSignal2;
   }
 });
 
@@ -14494,7 +14494,7 @@ var require_util3 = __commonJS({
       codes: { ERR_INVALID_ARG_TYPE }
     } = require_errors2();
     var { kResistStopPropagation, AggregateError, SymbolDispose } = require_primordials();
-    var AbortSignal = globalThis.AbortSignal || require_abort_controller().AbortSignal;
+    var AbortSignal2 = globalThis.AbortSignal || require_abort_controller().AbortSignal;
     var AbortController2 = globalThis.AbortController || require_abort_controller().AbortController;
     var AsyncFunction = Object.getPrototypeOf(async function() {
     }).constructor;
@@ -14595,7 +14595,7 @@ var require_util3 = __commonJS({
           }
         };
       },
-      AbortSignalAny: AbortSignal.any || function AbortSignalAny(signals) {
+      AbortSignalAny: AbortSignal2.any || function AbortSignalAny(signals) {
         if (signals.length === 1) {
           return signals[0];
         }
@@ -15107,7 +15107,7 @@ var require_utils2 = __commonJS({
 var require_end_of_stream = __commonJS({
   "node_modules/readable-stream/lib/internal/streams/end-of-stream.js"(exports2, module2) {
     "use strict";
-    var process3 = require_process();
+    var process4 = require_process();
     var { AbortError, codes } = require_errors2();
     var { ERR_INVALID_ARG_TYPE, ERR_STREAM_PREMATURE_CLOSE } = codes;
     var { kEmptyObject, once } = require_util3();
@@ -15243,17 +15243,17 @@ var require_end_of_stream = __commonJS({
       }
       stream.on("close", onclose);
       if (closed) {
-        process3.nextTick(onclose);
+        process4.nextTick(onclose);
       } else if (wState !== null && wState !== void 0 && wState.errorEmitted || rState !== null && rState !== void 0 && rState.errorEmitted) {
         if (!willEmitClose) {
-          process3.nextTick(onclosed);
+          process4.nextTick(onclosed);
         }
       } else if (!readable && (!willEmitClose || isReadable(stream)) && (writableFinished || isWritable(stream) === false)) {
-        process3.nextTick(onclosed);
+        process4.nextTick(onclosed);
       } else if (!writable && (!willEmitClose || isWritable(stream)) && (readableFinished || isReadable(stream) === false)) {
-        process3.nextTick(onclosed);
+        process4.nextTick(onclosed);
       } else if (rState && stream.req && stream.aborted) {
-        process3.nextTick(onclosed);
+        process4.nextTick(onclosed);
       }
       const cleanup = () => {
         callback = nop;
@@ -15281,7 +15281,7 @@ var require_end_of_stream = __commonJS({
           );
         };
         if (options.signal.aborted) {
-          process3.nextTick(abort);
+          process4.nextTick(abort);
         } else {
           addAbortListener = addAbortListener || require_util3().addAbortListener;
           const disposable = addAbortListener(options.signal, abort);
@@ -15308,7 +15308,7 @@ var require_end_of_stream = __commonJS({
           );
         };
         if (options.signal.aborted) {
-          process3.nextTick(abort);
+          process4.nextTick(abort);
         } else {
           addAbortListener = addAbortListener || require_util3().addAbortListener;
           const disposable = addAbortListener(options.signal, abort);
@@ -15321,7 +15321,7 @@ var require_end_of_stream = __commonJS({
       }
       const resolverFn = (...args) => {
         if (!isAborted2) {
-          process3.nextTick(() => callback.apply(stream, args));
+          process4.nextTick(() => callback.apply(stream, args));
         }
       };
       PromisePrototypeThen(stream[kIsClosedPromise].promise, resolverFn, resolverFn);
@@ -15359,7 +15359,7 @@ var require_end_of_stream = __commonJS({
 var require_destroy2 = __commonJS({
   "node_modules/readable-stream/lib/internal/streams/destroy.js"(exports2, module2) {
     "use strict";
-    var process3 = require_process();
+    var process4 = require_process();
     var {
       aggregateTwoErrors,
       codes: { ERR_MULTIPLE_CALLBACK },
@@ -15426,9 +15426,9 @@ var require_destroy2 = __commonJS({
           cb(err2);
         }
         if (err2) {
-          process3.nextTick(emitErrorCloseNT, self2, err2);
+          process4.nextTick(emitErrorCloseNT, self2, err2);
         } else {
-          process3.nextTick(emitCloseNT, self2);
+          process4.nextTick(emitCloseNT, self2);
         }
       }
       try {
@@ -15513,7 +15513,7 @@ var require_destroy2 = __commonJS({
           r.errored = err;
         }
         if (sync) {
-          process3.nextTick(emitErrorNT, stream, err);
+          process4.nextTick(emitErrorNT, stream, err);
         } else {
           emitErrorNT(stream, err);
         }
@@ -15535,7 +15535,7 @@ var require_destroy2 = __commonJS({
       if (stream.listenerCount(kConstruct) > 1) {
         return;
       }
-      process3.nextTick(constructNT, stream);
+      process4.nextTick(constructNT, stream);
     }
     function constructNT(stream) {
       let called = false;
@@ -15559,15 +15559,15 @@ var require_destroy2 = __commonJS({
         } else if (err) {
           errorOrDestroy(stream, err, true);
         } else {
-          process3.nextTick(emitConstructNT, stream);
+          process4.nextTick(emitConstructNT, stream);
         }
       }
       try {
         stream._construct((err) => {
-          process3.nextTick(onConstruct, err);
+          process4.nextTick(onConstruct, err);
         });
       } catch (err) {
-        process3.nextTick(onConstruct, err);
+        process4.nextTick(onConstruct, err);
       }
     }
     function emitConstructNT(stream) {
@@ -15581,7 +15581,7 @@ var require_destroy2 = __commonJS({
     }
     function emitErrorCloseLegacy(stream, err) {
       stream.emit("error", err);
-      process3.nextTick(emitCloseLegacy, stream);
+      process4.nextTick(emitCloseLegacy, stream);
     }
     function destroyer(stream, err) {
       if (!stream || isDestroyed(stream)) {
@@ -15602,9 +15602,9 @@ var require_destroy2 = __commonJS({
       } else if (typeof stream.close === "function") {
         stream.close();
       } else if (err) {
-        process3.nextTick(emitErrorCloseLegacy, stream, err);
+        process4.nextTick(emitErrorCloseLegacy, stream, err);
       } else {
-        process3.nextTick(emitCloseLegacy, stream);
+        process4.nextTick(emitCloseLegacy, stream);
       }
       if (!stream.destroyed) {
         stream[kIsDestroyed] = true;
@@ -16246,7 +16246,7 @@ var require_string_decoder2 = __commonJS({
 var require_from = __commonJS({
   "node_modules/readable-stream/lib/internal/streams/from.js"(exports2, module2) {
     "use strict";
-    var process3 = require_process();
+    var process4 = require_process();
     var { PromisePrototypeThen, SymbolAsyncIterator, SymbolIterator } = require_primordials();
     var { Buffer: Buffer2 } = require("buffer");
     var { ERR_INVALID_ARG_TYPE, ERR_STREAM_NULL_VALUES } = require_errors2().codes;
@@ -16288,9 +16288,9 @@ var require_from = __commonJS({
       readable._destroy = function(error2, cb) {
         PromisePrototypeThen(
           close(error2),
-          () => process3.nextTick(cb, error2),
+          () => process4.nextTick(cb, error2),
           // nextTick is here in case cb throws
-          (e) => process3.nextTick(cb, e || error2)
+          (e) => process4.nextTick(cb, e || error2)
         );
       };
       async function close(error2) {
@@ -16341,7 +16341,7 @@ var require_from = __commonJS({
 var require_readable2 = __commonJS({
   "node_modules/readable-stream/lib/internal/streams/readable.js"(exports2, module2) {
     "use strict";
-    var process3 = require_process();
+    var process4 = require_process();
     var {
       ArrayPrototypeIndexOf,
       NumberIsInteger,
@@ -16726,7 +16726,7 @@ var require_readable2 = __commonJS({
       if (!state.emittedReadable) {
         debug("emitReadable", state.flowing);
         state.emittedReadable = true;
-        process3.nextTick(emitReadable_, stream);
+        process4.nextTick(emitReadable_, stream);
       }
     }
     function emitReadable_(stream) {
@@ -16742,7 +16742,7 @@ var require_readable2 = __commonJS({
     function maybeReadMore(stream, state) {
       if (!state.readingMore && state.constructed) {
         state.readingMore = true;
-        process3.nextTick(maybeReadMore_, stream, state);
+        process4.nextTick(maybeReadMore_, stream, state);
       }
     }
     function maybeReadMore_(stream, state) {
@@ -16769,9 +16769,9 @@ var require_readable2 = __commonJS({
       }
       state.pipes.push(dest);
       debug("pipe count=%d opts=%j", state.pipes.length, pipeOpts);
-      const doEnd = (!pipeOpts || pipeOpts.end !== false) && dest !== process3.stdout && dest !== process3.stderr;
+      const doEnd = (!pipeOpts || pipeOpts.end !== false) && dest !== process4.stdout && dest !== process4.stderr;
       const endFn = doEnd ? onend : unpipe;
-      if (state.endEmitted) process3.nextTick(endFn);
+      if (state.endEmitted) process4.nextTick(endFn);
       else src.once("end", endFn);
       dest.on("unpipe", onunpipe);
       function onunpipe(readable, unpipeInfo) {
@@ -16921,7 +16921,7 @@ var require_readable2 = __commonJS({
           if (state.length) {
             emitReadable(this);
           } else if (!state.reading) {
-            process3.nextTick(nReadingNextTick, this);
+            process4.nextTick(nReadingNextTick, this);
           }
         }
       }
@@ -16931,7 +16931,7 @@ var require_readable2 = __commonJS({
     Readable.prototype.removeListener = function(ev, fn) {
       const res = Stream.prototype.removeListener.call(this, ev, fn);
       if (ev === "readable") {
-        process3.nextTick(updateReadableListening, this);
+        process4.nextTick(updateReadableListening, this);
       }
       return res;
     };
@@ -16939,7 +16939,7 @@ var require_readable2 = __commonJS({
     Readable.prototype.removeAllListeners = function(ev) {
       const res = Stream.prototype.removeAllListeners.apply(this, arguments);
       if (ev === "readable" || ev === void 0) {
-        process3.nextTick(updateReadableListening, this);
+        process4.nextTick(updateReadableListening, this);
       }
       return res;
     };
@@ -16971,7 +16971,7 @@ var require_readable2 = __commonJS({
     function resume(stream, state) {
       if (!state.resumeScheduled) {
         state.resumeScheduled = true;
-        process3.nextTick(resume_, stream, state);
+        process4.nextTick(resume_, stream, state);
       }
     }
     function resume_(stream, state) {
@@ -17248,7 +17248,7 @@ var require_readable2 = __commonJS({
       debug("endReadable", state.endEmitted);
       if (!state.endEmitted) {
         state.ended = true;
-        process3.nextTick(endReadableNT, state, stream);
+        process4.nextTick(endReadableNT, state, stream);
       }
     }
     function endReadableNT(state, stream) {
@@ -17257,7 +17257,7 @@ var require_readable2 = __commonJS({
         state.endEmitted = true;
         stream.emit("end");
         if (stream.writable && stream.allowHalfOpen === false) {
-          process3.nextTick(endWritableNT, stream);
+          process4.nextTick(endWritableNT, stream);
         } else if (state.autoDestroy) {
           const wState = stream._writableState;
           const autoDestroy = !wState || wState.autoDestroy && // We don't expect the writable to ever 'finish'
@@ -17307,7 +17307,7 @@ var require_readable2 = __commonJS({
 var require_writable = __commonJS({
   "node_modules/readable-stream/lib/internal/streams/writable.js"(exports2, module2) {
     "use strict";
-    var process3 = require_process();
+    var process4 = require_process();
     var {
       ArrayPrototypeSlice,
       Error: Error2,
@@ -17460,7 +17460,7 @@ var require_writable = __commonJS({
         err = new ERR_STREAM_DESTROYED("write");
       }
       if (err) {
-        process3.nextTick(cb, err);
+        process4.nextTick(cb, err);
         errorOrDestroy(stream, err, true);
         return err;
       }
@@ -17550,7 +17550,7 @@ var require_writable = __commonJS({
           stream._readableState.errored = er;
         }
         if (sync) {
-          process3.nextTick(onwriteError, stream, state, er, cb);
+          process4.nextTick(onwriteError, stream, state, er, cb);
         } else {
           onwriteError(stream, state, er, cb);
         }
@@ -17568,7 +17568,7 @@ var require_writable = __commonJS({
               stream,
               state
             };
-            process3.nextTick(afterWriteTick, state.afterWriteTickInfo);
+            process4.nextTick(afterWriteTick, state.afterWriteTickInfo);
           }
         } else {
           afterWrite(stream, state, 1, cb);
@@ -17705,7 +17705,7 @@ var require_writable = __commonJS({
       }
       if (typeof cb === "function") {
         if (err || state.finished) {
-          process3.nextTick(cb, err);
+          process4.nextTick(cb, err);
         } else {
           state[kOnFinished].push(cb);
         }
@@ -17734,7 +17734,7 @@ var require_writable = __commonJS({
           state.prefinished = true;
           stream.emit("prefinish");
           state.pendingcb++;
-          process3.nextTick(finish, stream, state);
+          process4.nextTick(finish, stream, state);
         }
       }
       state.sync = true;
@@ -17763,7 +17763,7 @@ var require_writable = __commonJS({
         if (state.pendingcb === 0) {
           if (sync) {
             state.pendingcb++;
-            process3.nextTick(
+            process4.nextTick(
               (stream2, state2) => {
                 if (needFinish(state2)) {
                   finish(stream2, state2);
@@ -17898,7 +17898,7 @@ var require_writable = __commonJS({
     Writable.prototype.destroy = function(err, cb) {
       const state = this._writableState;
       if (!state.destroyed && (state.bufferedIndex < state.buffered.length || state[kOnFinished].length)) {
-        process3.nextTick(errorBuffer, state);
+        process4.nextTick(errorBuffer, state);
       }
       destroy.call(this, err, cb);
       return this;
@@ -17927,7 +17927,7 @@ var require_writable = __commonJS({
 // node_modules/readable-stream/lib/internal/streams/duplexify.js
 var require_duplexify = __commonJS({
   "node_modules/readable-stream/lib/internal/streams/duplexify.js"(exports2, module2) {
-    var process3 = require_process();
+    var process4 = require_process();
     var bufferModule = require("buffer");
     var {
       isReadable,
@@ -18040,9 +18040,9 @@ var require_duplexify = __commonJS({
               final(async () => {
                 try {
                   await promise2;
-                  process3.nextTick(cb, null);
+                  process4.nextTick(cb, null);
                 } catch (err) {
-                  process3.nextTick(cb, err);
+                  process4.nextTick(cb, err);
                 }
               });
             },
@@ -18121,7 +18121,7 @@ var require_duplexify = __commonJS({
             const _promise = promise2;
             promise2 = null;
             const { chunk, done, cb } = await _promise;
-            process3.nextTick(cb);
+            process4.nextTick(cb);
             if (done) return;
             if (signal.aborted)
               throw new AbortError(void 0, {
@@ -18512,7 +18512,7 @@ var require_passthrough2 = __commonJS({
 // node_modules/readable-stream/lib/internal/streams/pipeline.js
 var require_pipeline = __commonJS({
   "node_modules/readable-stream/lib/internal/streams/pipeline.js"(exports2, module2) {
-    var process3 = require_process();
+    var process4 = require_process();
     var { ArrayIsArray, Promise: Promise2, SymbolAsyncIterator, SymbolDispose } = require_primordials();
     var eos = require_end_of_stream();
     var { once } = require_util3();
@@ -18714,7 +18714,7 @@ var require_pipeline = __commonJS({
           if (!error2) {
             lastStreamCleanup.forEach((fn) => fn());
           }
-          process3.nextTick(callback, error2, value);
+          process4.nextTick(callback, error2, value);
         }
       }
       let ret;
@@ -18793,11 +18793,11 @@ var require_pipeline = __commonJS({
                   if (end) {
                     pt.end();
                   }
-                  process3.nextTick(finish);
+                  process4.nextTick(finish);
                 },
                 (err) => {
                   pt.destroy(err);
-                  process3.nextTick(finish, err);
+                  process4.nextTick(finish, err);
                 }
               );
             } else if (isIterable(ret, true)) {
@@ -18878,7 +18878,7 @@ var require_pipeline = __commonJS({
         }
       }
       if (signal !== null && signal !== void 0 && signal.aborted || outerSignal !== null && outerSignal !== void 0 && outerSignal.aborted) {
-        process3.nextTick(abort);
+        process4.nextTick(abort);
       }
       return ret;
     }
@@ -18899,7 +18899,7 @@ var require_pipeline = __commonJS({
         };
         var endFn = endFn2;
         if (isReadableFinished(src)) {
-          process3.nextTick(endFn2);
+          process4.nextTick(endFn2);
         } else {
           src.once("end", endFn2);
         }
@@ -26023,7 +26023,7 @@ var require_commonjs4 = __commonJS({
         const dirs = /* @__PURE__ */ new Set();
         const queue = [entry];
         let processing = 0;
-        const process3 = () => {
+        const process4 = () => {
           let paused = false;
           while (!paused) {
             const dir = queue.shift();
@@ -26064,9 +26064,9 @@ var require_commonjs4 = __commonJS({
                 }
               }
               if (paused && !results.flowing) {
-                results.once("drain", process3);
+                results.once("drain", process4);
               } else if (!sync) {
-                process3();
+                process4();
               }
             };
             let sync = true;
@@ -26074,7 +26074,7 @@ var require_commonjs4 = __commonJS({
             sync = false;
           }
         };
-        process3();
+        process4();
         return results;
       }
       streamSync(entry = this.cwd, opts = {}) {
@@ -26092,7 +26092,7 @@ var require_commonjs4 = __commonJS({
         }
         const queue = [entry];
         let processing = 0;
-        const process3 = () => {
+        const process4 = () => {
           let paused = false;
           while (!paused) {
             const dir = queue.shift();
@@ -26126,9 +26126,9 @@ var require_commonjs4 = __commonJS({
             }
           }
           if (paused && !results.flowing)
-            results.once("drain", process3);
+            results.once("drain", process4);
         };
-        process3();
+        process4();
         return results;
       }
       chdir(path2 = this.cwd) {
@@ -28831,40 +28831,40 @@ var require_crc32 = __commonJS({
       var T6 = TT[5], T7 = TT[6], T8 = TT[7], T9 = TT[8], Ta = TT[9];
       var Tb = TT[10], Tc = TT[11], Td = TT[12], Te = TT[13], Tf = TT[14];
       function crc32_bstr(bstr, seed) {
-        var C = seed ^ -1;
-        for (var i = 0, L = bstr.length; i < L; ) C = C >>> 8 ^ T0[(C ^ bstr.charCodeAt(i++)) & 255];
-        return ~C;
+        var C2 = seed ^ -1;
+        for (var i = 0, L = bstr.length; i < L; ) C2 = C2 >>> 8 ^ T0[(C2 ^ bstr.charCodeAt(i++)) & 255];
+        return ~C2;
       }
       function crc32_buf(B, seed) {
-        var C = seed ^ -1, L = B.length - 15, i = 0;
-        for (; i < L; ) C = Tf[B[i++] ^ C & 255] ^ Te[B[i++] ^ C >> 8 & 255] ^ Td[B[i++] ^ C >> 16 & 255] ^ Tc[B[i++] ^ C >>> 24] ^ Tb[B[i++]] ^ Ta[B[i++]] ^ T9[B[i++]] ^ T8[B[i++]] ^ T7[B[i++]] ^ T6[B[i++]] ^ T5[B[i++]] ^ T4[B[i++]] ^ T3[B[i++]] ^ T2[B[i++]] ^ T1[B[i++]] ^ T0[B[i++]];
+        var C2 = seed ^ -1, L = B.length - 15, i = 0;
+        for (; i < L; ) C2 = Tf[B[i++] ^ C2 & 255] ^ Te[B[i++] ^ C2 >> 8 & 255] ^ Td[B[i++] ^ C2 >> 16 & 255] ^ Tc[B[i++] ^ C2 >>> 24] ^ Tb[B[i++]] ^ Ta[B[i++]] ^ T9[B[i++]] ^ T8[B[i++]] ^ T7[B[i++]] ^ T6[B[i++]] ^ T5[B[i++]] ^ T4[B[i++]] ^ T3[B[i++]] ^ T2[B[i++]] ^ T1[B[i++]] ^ T0[B[i++]];
         L += 15;
-        while (i < L) C = C >>> 8 ^ T0[(C ^ B[i++]) & 255];
-        return ~C;
+        while (i < L) C2 = C2 >>> 8 ^ T0[(C2 ^ B[i++]) & 255];
+        return ~C2;
       }
       function crc32_str(str, seed) {
-        var C = seed ^ -1;
+        var C2 = seed ^ -1;
         for (var i = 0, L = str.length, c = 0, d = 0; i < L; ) {
           c = str.charCodeAt(i++);
           if (c < 128) {
-            C = C >>> 8 ^ T0[(C ^ c) & 255];
+            C2 = C2 >>> 8 ^ T0[(C2 ^ c) & 255];
           } else if (c < 2048) {
-            C = C >>> 8 ^ T0[(C ^ (192 | c >> 6 & 31)) & 255];
-            C = C >>> 8 ^ T0[(C ^ (128 | c & 63)) & 255];
+            C2 = C2 >>> 8 ^ T0[(C2 ^ (192 | c >> 6 & 31)) & 255];
+            C2 = C2 >>> 8 ^ T0[(C2 ^ (128 | c & 63)) & 255];
           } else if (c >= 55296 && c < 57344) {
             c = (c & 1023) + 64;
             d = str.charCodeAt(i++) & 1023;
-            C = C >>> 8 ^ T0[(C ^ (240 | c >> 8 & 7)) & 255];
-            C = C >>> 8 ^ T0[(C ^ (128 | c >> 2 & 63)) & 255];
-            C = C >>> 8 ^ T0[(C ^ (128 | d >> 6 & 15 | (c & 3) << 4)) & 255];
-            C = C >>> 8 ^ T0[(C ^ (128 | d & 63)) & 255];
+            C2 = C2 >>> 8 ^ T0[(C2 ^ (240 | c >> 8 & 7)) & 255];
+            C2 = C2 >>> 8 ^ T0[(C2 ^ (128 | c >> 2 & 63)) & 255];
+            C2 = C2 >>> 8 ^ T0[(C2 ^ (128 | d >> 6 & 15 | (c & 3) << 4)) & 255];
+            C2 = C2 >>> 8 ^ T0[(C2 ^ (128 | d & 63)) & 255];
           } else {
-            C = C >>> 8 ^ T0[(C ^ (224 | c >> 12 & 15)) & 255];
-            C = C >>> 8 ^ T0[(C ^ (128 | c >> 6 & 63)) & 255];
-            C = C >>> 8 ^ T0[(C ^ (128 | c & 63)) & 255];
+            C2 = C2 >>> 8 ^ T0[(C2 ^ (224 | c >> 12 & 15)) & 255];
+            C2 = C2 >>> 8 ^ T0[(C2 ^ (128 | c >> 6 & 63)) & 255];
+            C2 = C2 >>> 8 ^ T0[(C2 ^ (128 | c & 63)) & 255];
           }
         }
-        return ~C;
+        return ~C2;
       }
       CRC322.table = T0;
       CRC322.bstr = crc32_bstr;
@@ -29095,22 +29095,22 @@ var require_zip_archive_output_stream = __commonJS({
     };
     ZipArchiveOutputStream.prototype._smartStream = function(ae, callback) {
       var deflate = ae.getMethod() === constants.METHOD_DEFLATED;
-      var process3 = deflate ? new DeflateCRC32Stream(this.options.zlib) : new CRC32Stream();
+      var process4 = deflate ? new DeflateCRC32Stream(this.options.zlib) : new CRC32Stream();
       var error2 = null;
       function handleStuff() {
-        var digest = process3.digest().readUInt32BE(0);
+        var digest = process4.digest().readUInt32BE(0);
         ae.setCrc(digest);
-        ae.setSize(process3.size());
-        ae.setCompressedSize(process3.size(true));
+        ae.setSize(process4.size());
+        ae.setCompressedSize(process4.size(true));
         this._afterAppend(ae);
         callback(error2, ae);
       }
-      process3.once("end", handleStuff.bind(this));
-      process3.once("error", function(err) {
+      process4.once("end", handleStuff.bind(this));
+      process4.once("error", function(err) {
         error2 = err;
       });
-      process3.pipe(this, { end: false });
-      return process3;
+      process4.pipe(this, { end: false });
+      return process4;
     };
     ZipArchiveOutputStream.prototype._writeCentralDirectoryEnd = function() {
       var records = this._entries.length;
@@ -46105,11 +46105,146 @@ var Server = class extends Protocol {
   }
 };
 
+// node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
+var import_node_process = __toESM(require("node:process"), 1);
+
+// node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
+var ReadBuffer = class {
+  append(chunk) {
+    this._buffer = this._buffer ? Buffer.concat([this._buffer, chunk]) : chunk;
+  }
+  readMessage() {
+    if (!this._buffer) {
+      return null;
+    }
+    const index = this._buffer.indexOf("\n");
+    if (index === -1) {
+      return null;
+    }
+    const line = this._buffer.toString("utf8", 0, index).replace(/\r$/, "");
+    this._buffer = this._buffer.subarray(index + 1);
+    return deserializeMessage(line);
+  }
+  clear() {
+    this._buffer = void 0;
+  }
+};
+function deserializeMessage(line) {
+  return JSONRPCMessageSchema.parse(JSON.parse(line));
+}
+function serializeMessage(message) {
+  return JSON.stringify(message) + "\n";
+}
+
+// node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
+var StdioServerTransport = class {
+  constructor(_stdin = import_node_process.default.stdin, _stdout = import_node_process.default.stdout) {
+    this._stdin = _stdin;
+    this._stdout = _stdout;
+    this._readBuffer = new ReadBuffer();
+    this._started = false;
+    this._ondata = (chunk) => {
+      this._readBuffer.append(chunk);
+      this.processReadBuffer();
+    };
+    this._onerror = (error2) => {
+      this.onerror?.(error2);
+    };
+  }
+  /**
+   * Starts listening for messages on stdin.
+   */
+  async start() {
+    if (this._started) {
+      throw new Error("StdioServerTransport already started! If using Server class, note that connect() calls start() automatically.");
+    }
+    this._started = true;
+    this._stdin.on("data", this._ondata);
+    this._stdin.on("error", this._onerror);
+  }
+  processReadBuffer() {
+    while (true) {
+      try {
+        const message = this._readBuffer.readMessage();
+        if (message === null) {
+          break;
+        }
+        this.onmessage?.(message);
+      } catch (error2) {
+        this.onerror?.(error2);
+      }
+    }
+  }
+  async close() {
+    this._stdin.off("data", this._ondata);
+    this._stdin.off("error", this._onerror);
+    const remainingDataListeners = this._stdin.listenerCount("data");
+    if (remainingDataListeners === 0) {
+      this._stdin.pause();
+    }
+    this._readBuffer.clear();
+    this.onclose?.();
+  }
+  send(message) {
+    return new Promise((resolve) => {
+      const json2 = serializeMessage(message);
+      if (this._stdout.write(json2)) {
+        resolve();
+      } else {
+        this._stdout.once("drain", resolve);
+      }
+    });
+  }
+};
+
 // src/handlers.ts
 var fs = __toESM(require("fs"), 1);
 var path = __toESM(require("path"), 1);
 var os = __toESM(require("os"), 1);
 var import_archiver = __toESM(require_archiver(), 1);
+var C = {
+  reset: "\x1B[0m",
+  bold: "\x1B[1m",
+  dim: "\x1B[2m",
+  blue: "\x1B[34m",
+  green: "\x1B[32m",
+  yellow: "\x1B[33m",
+  red: "\x1B[31m",
+  cyan: "\x1B[36m",
+  magenta: "\x1B[35m",
+  white: "\x1B[37m",
+  bgBlue: "\x1B[44m",
+  bgGreen: "\x1B[42m",
+  bgRed: "\x1B[41m",
+  bgYellow: "\x1B[43m"
+};
+function banner(title) {
+  console.error("");
+  console.error(`${C.cyan}\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557${C.reset}`);
+  console.error(`${C.cyan}\u2551${C.reset}   ${C.bold}${C.white}\u2693  ANCHORSCAPE${C.reset}                          ${C.cyan}\u2551${C.reset}`);
+  console.error(`${C.cyan}\u2551${C.reset}      ${C.bold}${C.white}${title}${C.reset}${" ".repeat(Math.max(0, 37 - title.length))}${C.cyan}\u2551${C.reset}`);
+  console.error(`${C.cyan}\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D${C.reset}`);
+  console.error("");
+}
+function logStep(step, total, message) {
+  console.error(`${C.blue}  [${step}/${total}]${C.reset} ${message}`);
+}
+function logSuccess(message) {
+  console.error(`${C.green}  \u2713${C.reset}  ${message}`);
+}
+function logError(message) {
+  console.error(`${C.red}  \u2717${C.reset}  ${message}`);
+}
+function logWarn(message) {
+  console.error(`${C.yellow}  \u26A0${C.reset}  ${message}`);
+}
+function logProgress(label, detail) {
+  const detailStr = detail ? ` ${C.dim}${detail}${C.reset}` : "";
+  console.error(`${C.cyan}  \u203A${C.reset}  ${label}${detailStr}`);
+}
+function logDivider() {
+  console.error(`${C.dim}  ${"\u2500".repeat(43)}${C.reset}`);
+}
 var CONFIG_DIR = path.join(os.homedir(), ".config", "anchorscape");
 var CREDENTIALS_FILE = path.join(CONFIG_DIR, "credentials.json");
 function loadCredentials() {
@@ -46153,6 +46288,8 @@ function requireAuth() {
   }
   return creds;
 }
+var FETCH_TIMEOUT = 15e3;
+var UPLOAD_TIMEOUT = 12e4;
 async function apiRequest(method, urlPath, options) {
   const url2 = `${getBaseUrl()}${urlPath}`;
   const headers = { ...options?.headers };
@@ -46163,10 +46300,12 @@ async function apiRequest(method, urlPath, options) {
   if (options?.body && !(options.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
+  const timeout = options?.timeout ?? FETCH_TIMEOUT;
   const res = await fetch(url2, {
     method,
     headers,
-    body: options?.body instanceof FormData ? options.body : options?.body ? JSON.stringify(options.body) : void 0
+    body: options?.body instanceof FormData ? options.body : options?.body ? JSON.stringify(options.body) : void 0,
+    signal: AbortSignal.timeout(timeout)
   });
   return res;
 }
@@ -46312,10 +46451,14 @@ function saveAnchorState(directory, state) {
   }
 }
 async function handleDeploy(directory, environment = "development", projectName, onProgress) {
+  const totalSteps = 6;
+  banner("D E P L O Y");
   if (!fs.existsSync(directory) || !fs.statSync(directory).isDirectory()) {
+    logError(`Directory not found: ${directory}`);
     throw new Error(`Directory not found: ${directory}`);
   }
-  requireAuth();
+  const creds = requireAuth();
+  logSuccess(`Authenticated as ${creds.email}`);
   if (!projectName) {
     try {
       const pkg = JSON.parse(fs.readFileSync(path.join(directory, "package.json"), "utf-8"));
@@ -46326,24 +46469,28 @@ async function handleDeploy(directory, environment = "development", projectName,
   }
   const cleanName = (projectName || path.basename(directory)).toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
   projectName = cleanName;
-  console.error(`\x1B[34m[deploy]\x1B[0m Packaging ${projectName}...`);
+  logStep(1, totalSteps, "Packaging project...");
+  if (onProgress) onProgress("Packaging project...");
   const { buffer, fileCount } = await zipDirectory(directory);
   const sizeMB = (buffer.length / 1024 / 1024).toFixed(1);
-  console.error(`\x1B[34m[deploy]\x1B[0m Packaged ${fileCount} files (${sizeMB} MB)`);
+  logSuccess(`Packaged ${C.bold}${fileCount}${C.reset} files (${sizeMB} MB)`);
   if (buffer.length > 100 * 1024 * 1024) {
+    logError(`Project too large: ${sizeMB} MB (max 100 MB)`);
     throw new Error(`Project is too large (${sizeMB} MB, max 100 MB). Add large files to .gitignore or .anchorignore.`);
   }
+  logStep(2, totalSteps, "Resolving environment...");
+  if (onProgress) onProgress("Resolving environment...");
   let environmentId = null;
   let isRedeployment = false;
   const anchorState = loadAnchorState(directory);
   if (anchorState?.environmentId) {
-    console.error(`\x1B[34m[deploy]\x1B[0m Found existing environment from .anchorscape/project.json`);
     try {
       await apiJSON("GET", `/api/k3s/environments/${anchorState.environmentId}`);
       environmentId = anchorState.environmentId;
       isRedeployment = true;
+      logSuccess(`Reusing environment from .anchorscape/project.json`);
     } catch {
-      console.error(`\x1B[33m[deploy]\x1B[0m Previous environment was deleted, creating new one`);
+      logWarn("Previous environment was deleted, creating new one");
     }
   }
   if (!environmentId) {
@@ -46354,15 +46501,16 @@ async function handleDeploy(directory, environment = "development", projectName,
       if (match) {
         environmentId = match.id;
         isRedeployment = true;
-        console.error(`\x1B[34m[deploy]\x1B[0m Found existing environment by name: ${projectName}`);
+        logSuccess(`Found existing environment: ${projectName}`);
       }
     } catch {
     }
   }
   if (!isRedeployment) {
-    console.error(`\x1B[34m[deploy]\x1B[0m First deploy \u2014 creating new environment`);
+    logProgress("First deploy", "new environment will be created");
   }
-  console.error(`\x1B[34m[deploy]\x1B[0m Uploading ${sizeMB} MB to Anchorscape...`);
+  logStep(3, totalSteps, `Uploading ${sizeMB} MB to Anchorscape...`);
+  if (onProgress) onProgress(`Uploading ${sizeMB} MB...`);
   const formData = new FormData();
   formData.append("file", new Blob([new Uint8Array(buffer)]), "project.zip");
   if (environmentId) {
@@ -46372,14 +46520,18 @@ async function handleDeploy(directory, environment = "development", projectName,
     formData.append("displayName", projectName);
   }
   const uploadRes = await apiRequest("POST", "/api/k3s/deploy/upload", {
-    body: formData
+    body: formData,
+    timeout: UPLOAD_TIMEOUT
+    // 2 min for large uploads
   });
   if (!uploadRes.ok) {
     const data = await uploadRes.json().catch(() => ({}));
-    throw new Error(`Upload failed: ${data.error || data.message || `HTTP ${uploadRes.status}`}`);
+    const errMsg = data.error || data.message || `HTTP ${uploadRes.status}`;
+    logError(`Upload failed: ${errMsg}`);
+    throw new Error(`Upload failed: ${errMsg}`);
   }
   const deployData = await uploadRes.json();
-  console.error(`\x1B[32m[deploy]\x1B[0m Upload complete \u2014 build started`);
+  logSuccess("Upload complete \u2014 build queued");
   const resolvedEnvId = deployData.environmentId || environmentId;
   if (resolvedEnvId) {
     saveAnchorState(directory, {
@@ -46389,44 +46541,53 @@ async function handleDeploy(directory, environment = "development", projectName,
       createdAt: anchorState?.createdAt || (/* @__PURE__ */ new Date()).toISOString()
     });
   }
+  logStep(4, totalSteps, "Building container image...");
+  if (onProgress) onProgress("Building container image...");
   const deploymentId = deployData.deploymentId;
   const maxWait = 3e5;
-  const pollInterval = 5e3;
+  const pollInterval = 2e3;
   const startTime = Date.now();
+  const maxConsecutiveErrors = 5;
   let finalStatus = "unknown";
   let finalUrl = "";
   let errorMessage = "";
   let buildLogs = "";
   let lastLoggedStatus = "";
   let lastLoggedStep = "";
+  let consecutiveErrors = 0;
   const progressLog = [];
+  const statusStepMap = {
+    queued: { step: 4, label: "Queued \u2014 waiting for build slot", icon: "\u23F3" },
+    building: { step: 4, label: "Building container image", icon: "\u{1F528}" },
+    pushing: { step: 5, label: "Pushing image to registry", icon: "\u{1F4E6}" },
+    deploying: { step: 5, label: "Deploying to cluster", icon: "\u{1F680}" },
+    verifying: { step: 6, label: "Running health checks", icon: "\u{1FA7A}" },
+    troubleshooting: { step: 6, label: "Anchorton analyzing failure", icon: "\u{1F50D}" }
+  };
   while (Date.now() - startTime < maxWait) {
     await new Promise((r) => setTimeout(r, pollInterval));
     try {
       const statusRes = await apiJSON("GET", `/api/k3s/deployments/${deploymentId}`);
+      consecutiveErrors = 0;
       const dep = statusRes.deployment;
-      const elapsed = Math.round((Date.now() - startTime) / 1e3);
+      const elapsed2 = Math.round((Date.now() - startTime) / 1e3);
       if (dep.status !== lastLoggedStatus) {
         lastLoggedStatus = dep.status;
-        const statusLabels = {
-          queued: "Queued...",
-          building: "Building container image...",
-          pushing: "Pushing image to registry...",
-          deploying: "Deploying to cluster...",
-          verifying: "Verifying health checks...",
-          troubleshooting: "Anchorton analyzing failure..."
-        };
-        const label = statusLabels[dep.status] || dep.status;
-        const msg = `[deploy] ${label} (${elapsed}s)`;
-        console.error(`\x1B[34m${msg}\x1B[0m`);
-        progressLog.push(`${elapsed}s: ${label}`);
-        if (onProgress) onProgress(msg);
+        const info = statusStepMap[dep.status];
+        if (info) {
+          logStep(info.step, totalSteps, `${info.label}...`);
+          progressLog.push(`${elapsed2}s \u2014 ${info.label}`);
+          if (onProgress) onProgress(`[${info.step}/${totalSteps}] ${info.label}`);
+        } else {
+          logProgress(dep.status, `${elapsed2}s`);
+          progressLog.push(`${elapsed2}s \u2014 ${dep.status}`);
+          if (onProgress) onProgress(dep.status);
+        }
       }
       if (dep.currentStep && dep.currentStep !== lastLoggedStep) {
         lastLoggedStep = dep.currentStep;
-        const msg = `[deploy] > ${dep.currentStep} (${elapsed}s)`;
-        console.error(`\x1B[36m${msg}\x1B[0m`);
-        progressLog.push(`  ${elapsed}s: ${dep.currentStep}`);
+        logProgress(dep.currentStep, `${elapsed2}s`);
+        progressLog.push(`  ${elapsed2}s \u2014 ${dep.currentStep}`);
         if (onProgress) onProgress(dep.currentStep);
       }
       if (dep.status === "completed") {
@@ -46440,26 +46601,58 @@ async function handleDeploy(directory, environment = "development", projectName,
         buildLogs = dep.buildLogs || "";
         break;
       }
-    } catch {
+    } catch (err) {
+      consecutiveErrors++;
+      const errMsg = err instanceof Error ? err.message : String(err);
+      const isTimeout = errMsg.includes("TimeoutError") || errMsg.includes("aborted");
+      const isNetworkError = isTimeout || errMsg.includes("ECONNREFUSED") || errMsg.includes("ENOTFOUND") || errMsg.includes("fetch failed");
+      if (isNetworkError) {
+        logWarn(`Network issue (attempt ${consecutiveErrors}/${maxConsecutiveErrors}): ${isTimeout ? "request timed out" : "connection failed"}`);
+      } else {
+        logError(`API error: ${errMsg}`);
+        finalStatus = "failed";
+        errorMessage = errMsg;
+        break;
+      }
+      if (consecutiveErrors >= maxConsecutiveErrors) {
+        logError(`${maxConsecutiveErrors} consecutive network failures \u2014 aborting`);
+        finalStatus = "failed";
+        errorMessage = `Lost connection to Anchorscape after ${maxConsecutiveErrors} retries. Check your network and try /anchorscape:status to see if the deployment completed.`;
+        break;
+      }
     }
   }
-  if (finalStatus === "completed" && resolvedEnvId) {
-    saveAnchorState(directory, {
-      environmentId: resolvedEnvId,
-      projectName,
-      environmentName: environment,
-      url: finalUrl,
-      createdAt: anchorState?.createdAt || (/* @__PURE__ */ new Date()).toISOString()
-    });
-    const elapsed = Math.round((Date.now() - startTime) / 1e3);
-    console.error(`\x1B[32m[deploy]\x1B[0m Live at ${finalUrl} (${elapsed}s)`);
-  } else if (finalStatus === "failed") {
-    console.error(`\x1B[31m[deploy]\x1B[0m Failed: ${errorMessage}`);
-  }
+  const elapsed = Math.round((Date.now() - startTime) / 1e3);
+  logDivider();
   if (finalStatus === "completed") {
-    const elapsed = Math.round((Date.now() - startTime) / 1e3);
-    const lines = [
-      "# Deployed Successfully!",
+    if (resolvedEnvId) {
+      saveAnchorState(directory, {
+        environmentId: resolvedEnvId,
+        projectName,
+        environmentName: environment,
+        url: finalUrl,
+        createdAt: anchorState?.createdAt || (/* @__PURE__ */ new Date()).toISOString()
+      });
+    }
+    console.error("");
+    console.error(`${C.green}${C.bold}  \u2713  DEPLOYED SUCCESSFULLY${C.reset}`);
+    console.error("");
+    console.error(`  ${C.bold}URL:${C.reset}          ${C.cyan}${finalUrl}${C.reset}`);
+    console.error(`  ${C.bold}Project:${C.reset}      ${projectName}`);
+    console.error(`  ${C.bold}Environment:${C.reset}  ${environment}`);
+    console.error(`  ${C.bold}Files:${C.reset}        ${fileCount} (${sizeMB} MB)`);
+    console.error(`  ${C.bold}Build time:${C.reset}   ${elapsed}s`);
+    console.error("");
+    logDivider();
+    console.error("");
+    console.error(`  ${C.dim}Next:${C.reset}`);
+    console.error(`    ${C.cyan}/anchorscape:status${C.reset}    Check deployment health`);
+    console.error(`    ${C.cyan}/anchorscape:dns${C.reset}       Set up custom domain`);
+    console.error(`    ${C.cyan}/anchorscape:dev${C.reset}       Iterative dev loop`);
+    console.error(`    ${C.cyan}/anchorscape:promote${C.reset}   Promote to staging/prod`);
+    console.error("");
+    return [
+      "# Deployed Successfully",
       "",
       `**URL:** ${finalUrl}`,
       `**Environment:** ${environment}`,
@@ -46467,32 +46660,59 @@ async function handleDeploy(directory, environment = "development", projectName,
       `**Files:** ${fileCount} (${sizeMB} MB)`,
       `**Build time:** ${elapsed}s`,
       "",
-      "## Add to your README",
+      "## Timeline",
+      ...progressLog.map((l) => `- ${l}`),
+      "",
+      "## README Badge",
       "```markdown",
       `[![Deployed on Anchorscape](https://anchorscape.com/api/badge/${projectName}/status)](${finalUrl})`,
       "```",
       "",
       "Use `/anchorscape:status` to check deployment health."
-    ];
-    return lines.join("\n");
+    ].join("\n");
   } else if (finalStatus === "failed") {
+    console.error("");
+    console.error(`${C.red}${C.bold}  \u2717  DEPLOYMENT FAILED${C.reset}`);
+    console.error("");
+    console.error(`  ${C.bold}Error:${C.reset}   ${errorMessage}`);
+    console.error(`  ${C.bold}Elapsed:${C.reset} ${elapsed}s`);
+    console.error("");
+    if (progressLog.length > 0) {
+      console.error(`  ${C.bold}Timeline:${C.reset}`);
+      for (const entry of progressLog) {
+        console.error(`    ${C.dim}${entry}${C.reset}`);
+      }
+      console.error("");
+    }
+    if (buildLogs) {
+      const logLines = buildLogs.split("\n").filter((l) => l.trim());
+      const lastLines = logLines.slice(-20);
+      console.error(`  ${C.bold}Build logs (last ${lastLines.length} lines):${C.reset}`);
+      for (const line of lastLines) {
+        console.error(`    ${C.dim}${line}${C.reset}`);
+      }
+      console.error("");
+    }
+    logDivider();
+    console.error("");
     const errorLines = [
       "# Deployment Failed",
       "",
       `**Error:** ${errorMessage}`,
+      `**Elapsed:** ${elapsed}s`,
       ""
     ];
     if (progressLog.length > 0) {
       errorLines.push("## Deploy Timeline");
       for (const entry of progressLog) {
-        errorLines.push(`  ${entry}`);
+        errorLines.push(`- ${entry}`);
       }
       errorLines.push("");
     }
     if (buildLogs) {
       const logLines = buildLogs.split("\n").filter((l) => l.trim());
-      const lastLines = logLines.slice(-30);
-      errorLines.push("## Build Logs (last 30 lines)");
+      const lastLines = logLines.slice(-100);
+      errorLines.push(`## Build Logs (last ${lastLines.length} lines)`);
       errorLines.push("```");
       errorLines.push(...lastLines);
       errorLines.push("```");
@@ -46516,14 +46736,48 @@ async function handleDeploy(directory, environment = "development", projectName,
     }
     throw new Error(errorLines.join("\n"));
   } else {
-    return [
-      `Deployment started (ID: ${deploymentId})`,
-      `Project: ${projectName}`,
-      `Environment: ${environment}`,
-      `Files: ${fileCount} (${sizeMB} MB)`,
+    console.error("");
+    console.error(`${C.yellow}${C.bold}  \u26A0  DEPLOYMENT TIMED OUT${C.reset}`);
+    console.error("");
+    console.error(`  ${C.bold}Status:${C.reset}   Build still running after ${elapsed}s`);
+    console.error(`  ${C.bold}Deploy ID:${C.reset} ${deploymentId}`);
+    console.error("");
+    console.error(`  The deployment may still complete. Check with:`);
+    console.error(`    ${C.cyan}/anchorscape:status${C.reset}`);
+    console.error("");
+    logDivider();
+    console.error("");
+    if (progressLog.length > 0) {
+      console.error(`  ${C.bold}Last known progress:${C.reset}`);
+      for (const entry of progressLog.slice(-5)) {
+        console.error(`    ${C.dim}${entry}${C.reset}`);
+      }
+      console.error("");
+    }
+    const lines = [
+      "# Deployment Timed Out",
       "",
-      "Deployment is still in progress. Use anchorscape_status to check."
-    ].join("\n");
+      `The deployment has been running for ${elapsed}s and hasn't completed yet.`,
+      `This does **not** mean it failed \u2014 large builds can take longer.`,
+      "",
+      `**Deployment ID:** ${deploymentId}`,
+      `**Project:** ${projectName}`,
+      `**Environment:** ${environment}`,
+      `**Last status:** ${lastLoggedStatus || "unknown"}`,
+      ""
+    ];
+    if (progressLog.length > 0) {
+      lines.push("## Progress so far");
+      for (const entry of progressLog) {
+        lines.push(`- ${entry}`);
+      }
+      lines.push("");
+    }
+    lines.push("## What to do");
+    lines.push("- Run `/anchorscape:status` to check if deployment completed");
+    lines.push("- Run `anchorscape_logs` tool to view build output");
+    lines.push("- If stuck, try deploying again with `/anchorscape:deploy`");
+    return lines.join("\n");
   }
 }
 async function handleLogin(apiUrl) {
@@ -46539,8 +46793,10 @@ async function handleLogin(apiUrl) {
   } catch {
     baseUrl = "https://anchorscape.com";
   }
+  banner("L O G I N");
   const existing = loadCredentials();
   if (existing && !isTokenExpired(existing)) {
+    logSuccess(`Already logged in as ${C.bold}${existing.email}${C.reset}`);
     return [
       `Already logged in as **${existing.email}**`,
       `API: ${existing.apiUrl}`,
@@ -46548,15 +46804,19 @@ async function handleLogin(apiUrl) {
       "To switch accounts, delete ~/.config/anchorscape/credentials.json and run this tool again."
     ].join("\n");
   }
+  logStep(1, 3, "Creating auth session...");
   const sessionRes = await fetch(`${baseUrl}/api/auth/cli/session`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" }
+    headers: { "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT)
   });
   if (!sessionRes.ok) {
+    logError("Failed to create auth session");
     throw new Error("Failed to create auth session. Is the Anchorscape server reachable?");
   }
   const { sessionId } = await sessionRes.json();
   const authUrl = `${baseUrl}/cli/auth?session=${sessionId}`;
+  logStep(2, 3, "Opening browser...");
   import("child_process").then(({ execFile }) => {
     const isWSL = (() => {
       try {
@@ -46584,8 +46844,9 @@ async function handleLogin(apiUrl) {
     }
   }).catch(() => {
   });
-  console.error(`\x1B[34m[auth]\x1B[0m Opening browser for login...`);
-  console.error(`\x1B[34m[auth]\x1B[0m URL: ${authUrl}`);
+  console.error(`  ${C.bold}Auth URL:${C.reset} ${C.cyan}${authUrl}${C.reset}`);
+  console.error("");
+  logStep(3, 3, "Waiting for browser authorization...");
   const maxWait = 12e4;
   const pollInterval = 2e3;
   const startTime = Date.now();
@@ -46593,7 +46854,8 @@ async function handleLogin(apiUrl) {
     await new Promise((r) => setTimeout(r, pollInterval));
     try {
       const statusRes = await fetch(
-        `${baseUrl}/api/auth/cli/session/${sessionId}/status`
+        `${baseUrl}/api/auth/cli/session/${sessionId}/status`,
+        { signal: AbortSignal.timeout(FETCH_TIMEOUT) }
       );
       if (!statusRes.ok) continue;
       const data = await statusRes.json();
@@ -46605,7 +46867,7 @@ async function handleLogin(apiUrl) {
           expiresAt: data.expiresAt || "",
           apiUrl: baseUrl
         });
-        console.error(`\x1B[32m[auth]\x1B[0m Logged in as ${data.email}`);
+        logSuccess(`Logged in as ${C.bold}${data.email}${C.reset}`);
         return [
           `Logged in as **${data.email}**`,
           "",
@@ -46618,6 +46880,7 @@ async function handleLogin(apiUrl) {
     } catch {
     }
   }
+  logWarn("Login was not completed in time");
   return [
     "**Login was not completed in time.**",
     "",
@@ -46630,6 +46893,7 @@ async function handleLogin(apiUrl) {
 }
 async function handleStatus(projectName, environmentId) {
   requireAuth();
+  banner("S T A T U S");
   if (environmentId) {
     const data2 = await apiJSON("GET", `/api/k3s/environments/${environmentId}`);
     const env = data2.environment;
@@ -46638,12 +46902,21 @@ async function handleStatus(projectName, environmentId) {
   const data = await apiJSON("GET", "/api/k3s/environments");
   const environments = data.environments || [];
   if (environments.length === 0) {
+    logWarn("No deployments found");
     return "No deployments found. Use anchorscape_deploy to deploy your first project.";
   }
   const filtered = projectName ? environments.filter((e) => e.displayName === projectName || e.name === projectName) : environments;
   if (filtered.length === 0) {
     const names = environments.map((e) => e.displayName || e.name);
     return `No environment named "${projectName}" found. Available: ${names.join(", ")}`;
+  }
+  for (const env of filtered) {
+    const status = env.activeDeploymentId ? "LIVE" : "IDLE";
+    const statusColor = status === "LIVE" ? C.green : C.yellow;
+    const url2 = env.customDomain ? `https://${env.customDomain}` : env.subdomain ? `https://${env.subdomain}.anchorscape.com` : "No URL yet";
+    console.error(`  ${C.bold}${env.displayName || env.name}${C.reset}  ${statusColor}${status}${C.reset}`);
+    console.error(`  ${C.dim}${url2}${C.reset}`);
+    console.error("");
   }
   const lines = ["# Anchorscape Deployments", ""];
   for (const env of filtered) {
@@ -46660,11 +46933,17 @@ async function handleStatus(projectName, environmentId) {
 }
 function formatEnvironmentStatus(env) {
   const url2 = env.customDomain ? `https://${env.customDomain}` : `https://${env.subdomain}.anchorscape.com`;
+  const status = env.activeDeploymentId ? "LIVE" : "IDLE";
+  const statusColor = status === "LIVE" ? C.green : C.yellow;
+  console.error(`  ${C.bold}${env.displayName || env.name}${C.reset}  ${statusColor}${status}${C.reset}`);
+  console.error(`  ${C.cyan}${url2}${C.reset}`);
+  console.error(`  ${C.dim}Tier: ${env.resourceTier} | Port: ${env.appPort} | Replicas: ${env.replicas}${C.reset}`);
+  console.error("");
   return [
     `## ${env.displayName || env.name}`,
     "",
     `**URL:** ${url2}`,
-    `**Status:** ${env.activeDeploymentId ? "LIVE" : "IDLE"}`,
+    `**Status:** ${status}`,
     `**Tier:** ${env.resourceTier}`,
     `**Port:** ${env.appPort}`,
     `**Replicas:** ${env.replicas}`,
@@ -46677,13 +46956,17 @@ function formatEnvironmentStatus(env) {
 }
 async function handleLogs(environmentId, lines = 50) {
   requireAuth();
+  banner("L O G S");
   const clampedLines = Math.max(1, Math.min(lines, 500));
+  logStep(1, 1, `Fetching last ${clampedLines} lines...`);
   const data = await apiJSON("GET", `/api/k3s/environments/${environmentId}/logs?lines=${clampedLines}`);
   if (!data.logs || data.logs.length === 0) {
+    logWarn("No logs available");
     return "No logs available for this environment.";
   }
+  logSuccess(`Retrieved ${data.logs.split("\n").length} log lines`);
   return [
-    `# Logs (last ${lines} lines)`,
+    `# Logs (last ${clampedLines} lines)`,
     `Environment: ${environmentId}`,
     "",
     "```",
@@ -46696,112 +46979,6 @@ async function handleProjects() {
 }
 
 // src/index.ts
-var DualModeStdioTransport = class {
-  _stdin;
-  _stdout;
-  _buffer = Buffer.alloc(0);
-  _started = false;
-  _mode = "unknown";
-  onclose;
-  onerror;
-  onmessage;
-  constructor(stdin, stdout) {
-    this._stdin = stdin ?? process.stdin;
-    this._stdout = stdout ?? process.stdout;
-  }
-  async start() {
-    if (this._started) {
-      throw new Error("Transport already started");
-    }
-    this._started = true;
-    this._stdin.on("data", (chunk) => {
-      this._buffer = Buffer.concat([this._buffer, chunk]);
-      this._processBuffer();
-    });
-    this._stdin.on("error", (error2) => {
-      this.onerror?.(error2);
-    });
-  }
-  _processBuffer() {
-    while (this._buffer.length > 0) {
-      if (this._mode === "unknown") {
-        const peek = this._buffer.toString("utf8", 0, Math.min(20, this._buffer.length));
-        if (peek.startsWith("Content-Length:")) {
-          this._mode = "content-length";
-          console.error("[MCP] Detected Content-Length framing");
-        } else {
-          this._mode = "newline";
-          console.error("[MCP] Detected newline-delimited framing");
-        }
-      }
-      if (this._mode === "content-length") {
-        const headerEnd = this._buffer.indexOf("\r\n\r\n");
-        if (headerEnd === -1) break;
-        const header = this._buffer.toString("utf8", 0, headerEnd);
-        const match = header.match(/Content-Length:\s*(\d+)/);
-        if (!match) {
-          this.onerror?.(new Error(`Invalid header: ${header}`));
-          this._buffer = this._buffer.subarray(headerEnd + 4);
-          continue;
-        }
-        const contentLength = parseInt(match[1], 10);
-        const messageStart = headerEnd + 4;
-        if (this._buffer.length < messageStart + contentLength) break;
-        const messageStr = this._buffer.toString("utf8", messageStart, messageStart + contentLength);
-        this._buffer = this._buffer.subarray(messageStart + contentLength);
-        try {
-          const message = JSONRPCMessageSchema.parse(JSON.parse(messageStr));
-          this.onmessage?.(message);
-        } catch (error2) {
-          this.onerror?.(error2 instanceof Error ? error2 : new Error(String(error2)));
-        }
-      } else {
-        const index = this._buffer.indexOf("\n");
-        if (index === -1) break;
-        const line = this._buffer.toString("utf8", 0, index).replace(/\r$/, "");
-        this._buffer = this._buffer.subarray(index + 1);
-        if (!line.trim()) continue;
-        try {
-          const message = JSONRPCMessageSchema.parse(JSON.parse(line));
-          this.onmessage?.(message);
-        } catch (error2) {
-          this.onerror?.(error2 instanceof Error ? error2 : new Error(String(error2)));
-        }
-      }
-    }
-  }
-  send(message) {
-    return new Promise((resolve) => {
-      const json2 = JSON.stringify(message);
-      let output;
-      if (this._mode === "content-length") {
-        const byteLength = Buffer.byteLength(json2, "utf8");
-        output = `Content-Length: ${byteLength}\r
-\r
-${json2}`;
-      } else {
-        output = json2 + "\n";
-      }
-      if (this._stdout.write(output)) {
-        resolve();
-      } else {
-        this._stdout.once("drain", resolve);
-      }
-    });
-  }
-  async close() {
-    this._stdin.removeAllListeners("data");
-    this._stdin.removeAllListeners("error");
-    if ("pause" in this._stdin && typeof this._stdin.pause === "function") {
-      this._stdin.pause();
-    }
-    this._buffer = Buffer.alloc(0);
-    this.onclose?.();
-  }
-  get sessionId() {
-    return void 0;
-  }
-};
 var TOOLS = [
   {
     name: "anchorscape_deploy",
@@ -46961,14 +47138,16 @@ async function main() {
               method: "notifications/progress",
               params: {
                 progressToken,
-                progress: progressCounter,
-                total: 20,
-                // Approximate total steps
+                progress: Math.min(progressCounter, 100),
+                total: 100,
                 message
               }
             }).catch(() => {
             });
-          } : void 0;
+          } : (
+            // Even without progress token, still pass onProgress so stderr output works
+            void 0
+          );
           result = await handleDeploy(directory, environment, projectName, onProgress);
           break;
         }
@@ -47006,7 +47185,7 @@ async function main() {
       throw new McpError(ErrorCode.InternalError, message);
     }
   });
-  const transport = new DualModeStdioTransport();
+  const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error("Anchorscape MCP server started");
 }
