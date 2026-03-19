@@ -46518,6 +46518,7 @@ async function handleDeploy(directory, environment = "development", projectName,
   } else {
     formData.append("autoCreateEnvironment", "true");
     formData.append("displayName", projectName);
+    formData.append("environmentName", environment);
   }
   const uploadRes = await apiRequest("POST", "/api/k3s/deploy/upload", {
     body: formData,
