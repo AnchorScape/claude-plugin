@@ -21,14 +21,15 @@ cd ~/.claude-plugins/anchorscape
 npm install && npm run build
 ```
 
-Then add to your `~/.claude/.mcp.json` (or project `.mcp.json`):
+Then add to your project's `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "anchorscape": {
-      "command": "node",
-      "args": ["~/.claude-plugins/anchorscape/dist/index.js"],
+      "command": "/usr/bin/node",
+      "args": ["/home/YOUR_USER/.claude-plugins/anchorscape/dist/bundle.cjs"],
+      "cwd": "/home/YOUR_USER/.claude-plugins/anchorscape",
       "env": {
         "ANCHOR_API_URL": "https://anchorscape.com"
       }
@@ -36,6 +37,10 @@ Then add to your `~/.claude/.mcp.json` (or project `.mcp.json`):
   }
 }
 ```
+
+Replace `YOUR_USER` with your system username (e.g., `shido`).
+
+> **Updating:** To update the plugin, run `git -C ~/.claude-plugins/anchorscape pull && npm --prefix ~/.claude-plugins/anchorscape run build`.
 
 ## Skills
 
